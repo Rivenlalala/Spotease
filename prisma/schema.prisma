@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String     @id @default(cuid())
+  email             String     @unique
+  name              String?
+  image             String?
+  // Spotify credentials
+  spotifyId         String?    @unique
+  spotifyAccessToken  String?  @db.Text
+  spotifyRefreshToken String?  @db.Text
+  spotifyExpiresAt    DateTime?
+  // Netease credentials
+  neteaseId         String?    @unique
+  neteaseCookie     String?    @db.Text
+  neteaseName       String?
+  neteaseAvatar     String?
+  // Relations
+  playlists         Playlist[]
+  // Timestamps
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+
+  // Ensure user has valid credentials for at least one service
+  @@index([spotifyId, neteaseId])
+}
+
+model Playlist {
+  id         String          @id @default(cuid())
+  name       String
+  spotifyId  String?         @unique
+  neteaseId  String?         @unique
+  platform   Platform
+  userId     String
+  user       User            @relation(fields: [userId], references: [id])
+  tracks     PlaylistTrack[]
+  pairedWith Playlist?       @relation("PlaylistPair", fields: [pairedId], references: [id])
+  pairedId   String?         @unique
+  paired     Playlist?       @relation("PlaylistPair")
+  syncEnabled Boolean        @default(true)
+  lastSynced DateTime?
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model Track {
+  id         String          @id @default(cuid())
+  name       String
+  artist     String
+  album      String
+  spotifyId  String?         @unique
+  neteaseId  String?         @unique
+  playlists  PlaylistTrack[]
+  pairedWith Track?          @relation("TrackPair", fields: [pairedId], references: [id])
+  pairedId   String?         @unique
+  paired     Track?          @relation("TrackPair")
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+}
+
+model PlaylistTrack {
+  id         String    @id @default(cuid())
+  playlist   Playlist  @relation(fields: [playlistId], references: [id])
+  playlistId String
+  track      Track     @relation(fields: [trackId], references: [id])
+  trackId    String
+  position   Int
+  lastSynced DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  @@unique([playlistId, trackId])
+  @@index([playlistId, position])
+}
+
+enum Platform {
+  SPOTIFY
+  NETEASE
+}
