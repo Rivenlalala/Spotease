@@ -32,9 +32,12 @@ model User {
   @@index([spotifyId, neteaseId])
 }
 
+/// @TypeInput({ create: true, update: true })
 model Playlist {
   id         String          @id @default(cuid())
   name       String
+  /// @TypeInput({ create: true, update: true })
+  cover      String?         @db.Text
   spotifyId  String?         @unique
   neteaseId  String?         @unique
   platform   Platform
@@ -46,6 +49,7 @@ model Playlist {
   paired     Playlist?       @relation("PlaylistPair")
   syncEnabled Boolean        @default(true)
   lastSynced DateTime?
+  trackCount Int
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 }

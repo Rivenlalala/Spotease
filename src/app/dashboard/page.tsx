@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
+import { Platform } from '@prisma/client'
 import NeteaseQRLoginModal from '@/components/NeteaseQRLoginModal'
+import PlaylistGrid from '@/components/PlaylistGrid'
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
@@ -30,6 +32,14 @@ export default function Dashboard() {
     loadUser()
   }, [userId])
 
+  if (!userId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <p className="text-xl text-red-500">User ID is required</p>
+      </div>
+    )
+  }
+
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
@@ -48,8 +58,9 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-6 mb-8">
+      <div className="max-w-7xl mx-auto space-y-8">
+        {/* User Profile */}
+        <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center space-x-4">
             {user.image && (
               <img
@@ -65,6 +76,7 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Service Connections */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="bg-white rounded-lg shadow-lg p-6">
             <h2 className="text-xl font-bold mb-4">Spotify Account</h2>
@@ -108,19 +120,33 @@ export default function Dashboard() {
             )}
           </div>
         </div>
+
+        {/* Playlists */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {user.spotifyId && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <PlaylistGrid userId={userId} platform={Platform.SPOTIFY} />
+            </div>
+          )}
+
+          {user.neteaseId && (
+            <div className="bg-white rounded-lg shadow-lg p-6">
+              <PlaylistGrid userId={userId} platform={Platform.NETEASE} />
+            </div>
+          )}
+        </div>
       </div>
-      {userId && (
-        <NeteaseQRLoginModal
-          isOpen={showNeteaseModal}
-          onClose={() => setShowNeteaseModal(false)}
-          userId={userId}
-          onSuccess={() => {
-            setShowNeteaseModal(false)
-            // Refresh user data
-            loadUser()
-          }}
-        />
-      )}
+
+      {/* Modals */}
+      <NeteaseQRLoginModal
+        isOpen={showNeteaseModal}
+        onClose={() => setShowNeteaseModal(false)}
+        userId={userId}
+        onSuccess={() => {
+          setShowNeteaseModal(false)
+          loadUser()
+        }}
+      />
     </div>
   )
 }

@@ -1,37 +1,6 @@
+import { QRKeyResponse, QRImageResponse, QRCheckResponse, LoginStatusResponse, PlaylistResponse, TracksResponse, SearchResponse, NeteasePlaylist } from '@/types/netease';
+
 const NETEASE_API_BASE = 'https://netease-api.rivenlalala.xyz';
-
-interface QRKeyResponse {
-  code: number;
-  data: {
-    code: number;
-    unikey: string;
-  };
-}
-
-interface QRImageResponse {
-  code: number;
-  data: {
-    qrurl: string;
-    qrimg: string;
-  };
-}
-
-interface QRCheckResponse {
-  code: number;
-  message?: string;
-  cookie?: string;
-}
-
-interface LoginStatusResponse {
-  data: {
-    code: number;
-    profile: {
-      userId: number;
-      nickname: string;
-      avatarUrl: string;
-    };
-  };
-}
 
 // Extract MUSIC_U cookie from the full cookie string
 export function extractMusicUCookie(cookies: string): string {
@@ -96,8 +65,12 @@ export async function checkQRStatus(key: string): Promise<QRCheckResponse> {
   return response.json();
 }
 
-export async function getUserPlaylists(cookie: string) {
-  const response = await fetch(`${NETEASE_API_BASE}/user/playlist`, {
+export async function getUserPlaylists(cookie: string, userId?: string): Promise<PlaylistResponse> {
+  const url = userId 
+    ? `${NETEASE_API_BASE}/user/playlist?uid=${userId}`
+    : `${NETEASE_API_BASE}/user/playlist`;
+    
+  const response = await fetch(url, {
     headers: {
       Cookie: cookie,
     },
@@ -110,7 +83,7 @@ export async function getUserPlaylists(cookie: string) {
   return response.json();
 }
 
-export async function getPlaylistTracks(id: string, cookie: string) {
+export async function getPlaylistTracks(id: string, cookie: string): Promise<TracksResponse> {
   const response = await fetch(`${NETEASE_API_BASE}/playlist/track/all?id=${id}`, {
     headers: {
       Cookie: cookie,
@@ -124,7 +97,13 @@ export async function getPlaylistTracks(id: string, cookie: string) {
   return response.json();
 }
 
-export async function createPlaylist(name: string, cookie: string) {
+export interface CreatePlaylistResponse {
+  code: number;
+  id: number;
+  playlist: NeteasePlaylist;
+}
+
+export async function createPlaylist(name: string, cookie: string): Promise<CreatePlaylistResponse> {
   const response = await fetch(`${NETEASE_API_BASE}/playlist/create`, {
     method: 'POST',
     headers: {
@@ -143,7 +122,17 @@ export async function createPlaylist(name: string, cookie: string) {
   return response.json();
 }
 
-export async function addTracksToPlaylist(playlistId: string, trackIds: string[], cookie: string) {
+export interface AddTracksResponse {
+  code: number;
+  status: boolean;
+  message?: string;
+}
+
+export async function addTracksToPlaylist(
+  playlistId: string,
+  trackIds: string[],
+  cookie: string
+): Promise<AddTracksResponse> {
   const response = await fetch(`${NETEASE_API_BASE}/playlist/tracks`, {
     method: 'POST',
     headers: {
@@ -162,4 +151,26 @@ export async function addTracksToPlaylist(playlistId: string, trackIds: string[]
   }
 
   return response.json();
+}
+
+export async function searchTracks(query: string, cookie: string): Promise<SearchResponse> {
+  const response = await fetch(
+    `${NETEASE_API_BASE}/search?keywords=${encodeURIComponent(query)}&type=1`,
+    {
+      headers: {
+        Cookie: cookie,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Failed to search tracks');
+  }
+
+  const data = await response.json();
+  if (!data.result?.songs) {
+    throw new Error('Invalid search response');
+  }
+
+  return data;
 }
