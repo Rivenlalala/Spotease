@@ -155,7 +155,7 @@ export async function addTracksToPlaylist(
 
 export async function searchTracks(query: string, cookie: string): Promise<SearchResponse> {
   const response = await fetch(
-    `${NETEASE_API_BASE}/search?keywords=${encodeURIComponent(query)}&type=1`,
+    `${NETEASE_API_BASE}/cloudsearch?keywords=${encodeURIComponent(query)}&type=1&limit=30`,
     {
       headers: {
         Cookie: cookie,

@@ -157,8 +157,9 @@ export async function GET(request: NextRequest): Promise<Response> {
         }
       }
 
-      // Read heart SVG for liked songs
+      // Create data URL for heart SVG
       const heartSvg = await fs.readFile(path.join(process.cwd(), 'public', 'heart.svg'), 'utf-8');
+      const heartDataUrl = `data:image/svg+xml;base64,${Buffer.from(heartSvg).toString('base64')}`;
 
       // Cache liked songs playlist
       await prisma.playlist.upsert({
@@ -170,12 +171,12 @@ export async function GET(request: NextRequest): Promise<Response> {
           name: 'Liked Songs',
           platform: Platform.SPOTIFY,
           userId,
-          cover: heartSvg,
+          cover: heartDataUrl,
           trackCount: likedSongsData.total,
         },
         update: {
           trackCount: likedSongsData.total,
-          cover: heartSvg,
+          cover: heartDataUrl,
           updatedAt: new Date(),
         },
       });

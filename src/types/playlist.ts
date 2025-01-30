@@ -6,6 +6,7 @@ export interface Playlist {
   platform: Platform;
   trackCount: number;
   cover?: string | null;
+  userId?: string | null;
   lastSynced?: string | null;
 }
 

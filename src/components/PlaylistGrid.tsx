@@ -15,10 +15,11 @@ interface Playlist {
 interface PlaylistGridProps {
   userId: string
   platform: Platform
-  onSelect?: (playlist: Playlist) => void
+  onSelect?: (playlist: Playlist | null) => void
+  selectedPlaylist?: Playlist | null
 }
 
-export default function PlaylistGrid({ userId, platform, onSelect }: PlaylistGridProps) {
+export default function PlaylistGrid({ userId, platform, onSelect, selectedPlaylist }: PlaylistGridProps) {
   const [playlists, setPlaylists] = useState<Playlist[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -97,6 +98,7 @@ export default function PlaylistGrid({ userId, platform, onSelect }: PlaylistGri
               key={playlist.id}
               playlist={playlist}
               onSelect={onSelect}
+              isSelected={selectedPlaylist?.id === playlist.id}
             />
           ))}
         </div>

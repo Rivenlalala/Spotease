@@ -1,6 +1,6 @@
 import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { getPlaylistTracks } from '@/lib/netease';
+import { getPlaylistTracks, addTracksToPlaylist } from '@/lib/netease';
 import type { NeteaseTrack } from '@/types/netease';
 
 export const GET = async (
@@ -123,6 +123,100 @@ export const GET = async (
     console.error('Error fetching tracks:', error);
     return Response.json(
       { error: 'Failed to fetch tracks' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { playlistId: string } }
+): Promise<Response> {
+  try {
+    const { playlistId } = params;
+    const { trackIds, userId } = await request.json();
+
+    if (!Array.isArray(trackIds) || trackIds.length === 0 || !userId) {
+      return Response.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    // Get user's cookie
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        neteaseCookie: true,
+      },
+    });
+
+    if (!user?.neteaseCookie) {
+      return Response.json(
+        { error: 'User not connected to Netease' },
+        { status: 400 }
+      );
+    }
+
+    // Add tracks to playlist
+    await addTracksToPlaylist(playlistId, trackIds, user.neteaseCookie);
+
+    // Update database
+    const playlist = await prisma.playlist.findUnique({
+      where: { neteaseId: playlistId },
+      select: { id: true },
+    });
+
+    if (!playlist) {
+      return Response.json(
+        { error: 'Playlist not found' },
+        { status: 404 }
+      );
+    }
+
+    // Create or update tracks and their relationships
+    await prisma.$transaction(async (tx) => {
+      const currentPosition = await tx.playlistTrack.count({
+        where: { playlistId: playlist.id },
+      });
+
+      for (const [index, trackId] of trackIds.entries()) {
+        const trackRecord = await tx.track.upsert({
+          where: { neteaseId: trackId.toString() },
+          create: {
+            neteaseId: trackId.toString(),
+            name: '', // These will be updated on next GET refresh
+            artist: '',
+            album: '',
+          },
+          update: {},
+        });
+
+        await tx.playlistTrack.create({
+          data: {
+            playlistId: playlist.id,
+            trackId: trackRecord.id,
+            position: currentPosition + index,
+          },
+        });
+      }
+
+      // Update track count
+      await tx.playlist.update({
+        where: { id: playlist.id },
+        data: {
+          trackCount: {
+            increment: trackIds.length,
+          },
+        },
+      });
+    });
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error('Error adding tracks:', error);
+    return Response.json(
+      { error: 'Failed to add tracks' },
       { status: 500 }
     );
   }

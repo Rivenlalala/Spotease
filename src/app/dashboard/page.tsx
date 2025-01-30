@@ -1,10 +1,28 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { Platform } from '@prisma/client'
 import NeteaseQRLoginModal from '@/components/NeteaseQRLoginModal'
 import PlaylistGrid from '@/components/PlaylistGrid'
+import LinkPlaylistsButton from '@/components/LinkPlaylistsButton'
+import LinkedPlaylists, { LinkedPlaylistsRef } from '@/components/LinkedPlaylists'
+import SyncPlaylistsModal from '@/components/SyncPlaylistsModal'
+import { Track } from '@/types/track'
+
+interface Playlist {
+  id: string
+  name: string
+  platform: Platform
+  trackCount: number
+  cover: string | null
+}
+
+interface PlaylistWithTracks {
+  id: string
+  name: string
+  tracks: Track[]
+}
 
 export default function Dashboard() {
   const searchParams = useSearchParams()
@@ -12,6 +30,11 @@ export default function Dashboard() {
   const [user, setUser] = useState<any>(null)
   const [loading, setLoading] = useState(true)
   const [showNeteaseModal, setShowNeteaseModal] = useState(false)
+  const [selectedSpotifyPlaylist, setSelectedSpotifyPlaylist] = useState<Playlist | null>(null)
+  const [selectedNeteasePlaylist, setSelectedNeteasePlaylist] = useState<Playlist | null>(null)
+  const [showSyncModal, setShowSyncModal] = useState(false)
+  const [syncSpotifyPlaylist, setSyncSpotifyPlaylist] = useState<PlaylistWithTracks | null>(null)
+  const [syncNeteasePlaylist, setSyncNeteasePlaylist] = useState<PlaylistWithTracks | null>(null)
 
   async function loadUser() {
     if (!userId) return
@@ -31,6 +54,68 @@ export default function Dashboard() {
   useEffect(() => {
     loadUser()
   }, [userId])
+
+  const linkedPlaylistsRef = useRef<LinkedPlaylistsRef>(null);
+
+  async function handleLinkPlaylists() {
+    if (!selectedSpotifyPlaylist || !selectedNeteasePlaylist) return;
+
+    try {
+      const response = await fetch('/api/playlists/link', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          spotifyId: selectedSpotifyPlaylist.id,
+          neteaseId: selectedNeteasePlaylist.id,
+          userId,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to link playlists');
+      }
+
+      // Refresh linked playlists
+      linkedPlaylistsRef.current?.loadLinkedPlaylists();
+
+      // Now fetch tracks for sync modal
+      const [spotifyResponse, neteaseResponse] = await Promise.all([
+        fetch(`/api/playlists/spotify/${selectedSpotifyPlaylist.id}/tracks`),
+        fetch(`/api/playlists/netease/${selectedNeteasePlaylist.id}/tracks`)
+      ]);
+
+      if (!spotifyResponse.ok || !neteaseResponse.ok) {
+        throw new Error('Failed to fetch tracks');
+      }
+
+      const [spotifyData, neteaseData] = await Promise.all([
+        spotifyResponse.json(),
+        neteaseResponse.json()
+      ]);
+
+      // Set playlists with tracks and show sync modal
+      setSyncSpotifyPlaylist({
+        id: selectedSpotifyPlaylist.id,
+        name: selectedSpotifyPlaylist.name,
+        tracks: spotifyData.tracks
+      });
+      setSyncNeteasePlaylist({
+        id: selectedNeteasePlaylist.id,
+        name: selectedNeteasePlaylist.name,
+        tracks: neteaseData.tracks
+      });
+      setShowSyncModal(true);
+
+      // Reset selections
+      setSelectedSpotifyPlaylist(null);
+      setSelectedNeteasePlaylist(null);
+    } catch (error) {
+      console.error('Error linking playlists:', error);
+      alert('Failed to link playlists');
+    }
+  }
 
   if (!userId) {
     return (
@@ -121,17 +206,37 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* Linked Playlists */}
+        {user.spotifyId && user.neteaseId && (
+          <div className="bg-white rounded-lg shadow-lg p-6">
+            <LinkedPlaylists 
+              userId={userId} 
+              ref={linkedPlaylistsRef}
+            />
+          </div>
+        )}
+
         {/* Playlists */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {user.spotifyId && (
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <PlaylistGrid userId={userId} platform={Platform.SPOTIFY} />
+              <PlaylistGrid 
+                userId={userId} 
+                platform={Platform.SPOTIFY} 
+                onSelect={setSelectedSpotifyPlaylist}
+                selectedPlaylist={selectedSpotifyPlaylist}
+              />
             </div>
           )}
 
           {user.neteaseId && (
             <div className="bg-white rounded-lg shadow-lg p-6">
-              <PlaylistGrid userId={userId} platform={Platform.NETEASE} />
+              <PlaylistGrid 
+                userId={userId} 
+                platform={Platform.NETEASE} 
+                onSelect={setSelectedNeteasePlaylist}
+                selectedPlaylist={selectedNeteasePlaylist}
+              />
             </div>
           )}
         </div>
@@ -147,6 +252,29 @@ export default function Dashboard() {
           loadUser()
         }}
       />
+
+      {/* Link Button */}
+      <LinkPlaylistsButton
+        spotifyPlaylist={selectedSpotifyPlaylist}
+        neteasePlaylist={selectedNeteasePlaylist}
+        onLinkClick={handleLinkPlaylists}
+        userId={userId}
+      />
+
+      {/* Sync Modal */}
+      {showSyncModal && syncSpotifyPlaylist && syncNeteasePlaylist && (
+        <SyncPlaylistsModal
+          userId={userId}
+          spotifyPlaylist={syncSpotifyPlaylist}
+          neteasePlaylist={syncNeteasePlaylist}
+          onClose={() => {
+            setShowSyncModal(false)
+            setSyncSpotifyPlaylist(null)
+            setSyncNeteasePlaylist(null)
+          }}
+          onPlaylistsUpdated={() => linkedPlaylistsRef.current?.loadLinkedPlaylists()}
+        />
+      )}
     </div>
   )
 }

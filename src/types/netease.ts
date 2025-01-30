@@ -44,13 +44,18 @@ export interface NeteasePlaylist {
   ordered: boolean;
 }
 
+export interface NeteaseArtist {
+  id: number;
+  name: string;
+  tns: string[];  // Translated names
+  alias: string[];  // Alternative names
+  alia?: string[];  // Alternative names (some responses use this)
+}
+
 export interface NeteaseTrack {
   id: number;
   name: string;
-  ar: Array<{
-    id: number;
-    name: string;
-  }>;
+  ar: NeteaseArtist[];
   al: {
     id: number;
     name: string;

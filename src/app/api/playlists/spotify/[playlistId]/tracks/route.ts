@@ -1,6 +1,6 @@
 import { type NextRequest } from 'next/server';
 import { prisma } from '@/lib/db';
-import { refreshSpotifyToken } from '@/lib/spotify';
+import { refreshSpotifyToken, addTracksToPlaylist } from '@/lib/spotify';
 import { Platform } from '@prisma/client';
 import type { SpotifyTrack } from '@/types/spotify';
 
@@ -22,7 +22,16 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
     }
 
     const data = await response.json();
-    tracks.push(...data.items.map((item: any) => item.track).filter(Boolean));
+    const items = data.items.map((item: any) => {
+      if (!item.track) return null;
+      return {
+        id: item.track.id,
+        name: item.track.name,
+        artists: item.track.artists,
+        album: item.track.album
+      };
+    });
+    tracks.push(...items.filter(Boolean));
     url = data.next;
   }
 
@@ -31,12 +40,12 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { playlistId: string } }
+  context: { params: Promise<{ playlistId: string }> }
 ): Promise<Response> {
   try {
     const searchParams = request.nextUrl.searchParams;
     const refresh = searchParams.get('refresh') === 'true';
-    const { playlistId } = params;
+    const { playlistId } = await context.params;
 
     // First try to get cached tracks
     const playlist = await prisma.playlist.findUnique({
@@ -156,6 +165,103 @@ export async function GET(
     console.error('Error fetching tracks:', error);
     return Response.json(
       { error: 'Failed to fetch tracks' },
+      { status: 500 }
+    );
+  }
+}
+
+export async function POST(
+  request: NextRequest,
+  context: { params: Promise<{ playlistId: string }> }
+): Promise<Response> {
+  try {
+    const { playlistId } = await context.params;
+    const { trackIds, userId } = await request.json();
+
+    if (!Array.isArray(trackIds) || trackIds.length === 0 || !userId) {
+      return Response.json(
+        { error: 'Invalid request body' },
+        { status: 400 }
+      );
+    }
+
+    // Get user's refresh token
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: {
+        spotifyRefreshToken: true,
+      },
+    });
+
+    if (!user?.spotifyRefreshToken) {
+      return Response.json(
+        { error: 'User not connected to Spotify' },
+        { status: 400 }
+      );
+    }
+
+    // Refresh access token
+    const { access_token: accessToken } = await refreshSpotifyToken(user.spotifyRefreshToken);
+
+    // Add tracks to playlist
+    await addTracksToPlaylist(playlistId, trackIds, accessToken);
+
+    // Update database
+    const playlist = await prisma.playlist.findUnique({
+      where: { spotifyId: playlistId },
+      select: { id: true },
+    });
+
+    if (!playlist) {
+      return Response.json(
+        { error: 'Playlist not found' },
+        { status: 404 }
+      );
+    }
+
+    // Create or update tracks and their relationships
+    await prisma.$transaction(async (tx) => {
+      const currentPosition = await tx.playlistTrack.count({
+        where: { playlistId: playlist.id },
+      });
+
+      for (const [index, trackId] of trackIds.entries()) {
+        const trackRecord = await tx.track.upsert({
+          where: { spotifyId: trackId },
+          create: {
+            spotifyId: trackId,
+            name: '', // These will be updated on next GET refresh
+            artist: '',
+            album: '',
+          },
+          update: {},
+        });
+
+        await tx.playlistTrack.create({
+          data: {
+            playlistId: playlist.id,
+            trackId: trackRecord.id,
+            position: currentPosition + index,
+          },
+        });
+      }
+
+      // Update track count
+      await tx.playlist.update({
+        where: { id: playlist.id },
+        data: {
+          trackCount: {
+            increment: trackIds.length,
+          },
+        },
+      });
+    });
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error('Error adding tracks:', error);
+    return Response.json(
+      { error: 'Failed to add tracks' },
       { status: 500 }
     );
   }
