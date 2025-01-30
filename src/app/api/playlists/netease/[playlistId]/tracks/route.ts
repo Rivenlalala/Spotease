@@ -1,11 +1,11 @@
-import { type NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
-import { getPlaylistTracks, addTracksToPlaylist } from '@/lib/netease';
-import type { NeteaseTrack } from '@/types/netease';
+import { type NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
+import { getPlaylistTracks, addTracksToPlaylist } from "@/lib/netease";
+import type { NeteaseTrack } from "@/types/netease";
 
 export const GET = async (
   request: NextRequest,
-  { params }: { params: { playlistId: string } }
+  { params }: { params: { playlistId: string } },
 ): Promise<Response> => {
   try {
     const { playlistId } = await params;
@@ -21,7 +21,7 @@ export const GET = async (
             track: true,
           },
           orderBy: {
-            position: 'asc',
+            position: "asc",
           },
         },
         user: {
@@ -33,24 +33,18 @@ export const GET = async (
     });
 
     if (!playlist) {
-      return Response.json(
-        { error: 'Playlist not found' },
-        { status: 404 }
-      );
+      return Response.json({ error: "Playlist not found" }, { status: 404 });
     }
 
     if (!playlist.user.neteaseCookie) {
-      return Response.json(
-        { error: 'User not connected to Netease' },
-        { status: 400 }
-      );
+      return Response.json({ error: "User not connected to Netease" }, { status: 400 });
     }
 
     // Return cached tracks if available and refresh not requested
-    if (!request.url.includes('refresh=true')) {
+    if (!request.url.includes("refresh=true")) {
       if (playlist.tracks.length > 0) {
         return Response.json({
-          tracks: playlist.tracks.map(pt => ({
+          tracks: playlist.tracks.map((pt) => ({
             id: pt.track.neteaseId!,
             name: pt.track.name,
             artist: pt.track.artist,
@@ -64,7 +58,10 @@ export const GET = async (
     }
 
     // Fetch fresh tracks from Netease using the user's cookie
-    const { songs: neteaseTracks } = await getPlaylistTracks(playlistId, playlist.user.neteaseCookie);
+    const { songs: neteaseTracks } = await getPlaylistTracks(
+      playlistId,
+      playlist.user.neteaseCookie,
+    );
 
     // Update tracks in database
     await prisma.$transaction(async (tx) => {
@@ -86,13 +83,13 @@ export const GET = async (
           create: {
             neteaseId: track.id.toString(),
             name: track.name,
-            artist: (track.ar || []).map(a => a.name).join(', '),
-            album: track.al?.name || 'Unknown Album',
+            artist: (track.ar || []).map((a) => a.name).join(", "),
+            album: track.al?.name || "Unknown Album",
           },
           update: {
             name: track.name,
-            artist: (track.ar || []).map(a => a.name).join(', '),
-            album: track.al?.name || 'Unknown Album',
+            artist: (track.ar || []).map((a) => a.name).join(", "),
+            album: track.al?.name || "Unknown Album",
           },
         });
 
@@ -110,37 +107,31 @@ export const GET = async (
     const updatedTracks = neteaseTracks.map((track, index) => ({
       id: track.id,
       name: track.name,
-      artist: (track.ar || []).map(a => a.name).join(', '),
-      album: track.al?.name || 'Unknown Album',
-      position: index
+      artist: (track.ar || []).map((a) => a.name).join(", "),
+      album: track.al?.name || "Unknown Album",
+      position: index,
     }));
 
-    return Response.json({ 
+    return Response.json({
       tracks: updatedTracks,
       trackCount: neteaseTracks.length,
     });
   } catch (error) {
-    console.error('Error fetching tracks:', error);
-    return Response.json(
-      { error: 'Failed to fetch tracks' },
-      { status: 500 }
-    );
+    console.error("Error fetching tracks:", error);
+    return Response.json({ error: "Failed to fetch tracks" }, { status: 500 });
   }
-}
+};
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { playlistId: string } }
+  { params }: { params: { playlistId: string } },
 ): Promise<Response> {
   try {
     const { playlistId } = params;
     const { trackIds, userId } = await request.json();
 
     if (!Array.isArray(trackIds) || trackIds.length === 0 || !userId) {
-      return Response.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
-      );
+      return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
 
     // Get user's cookie
@@ -152,10 +143,7 @@ export async function POST(
     });
 
     if (!user?.neteaseCookie) {
-      return Response.json(
-        { error: 'User not connected to Netease' },
-        { status: 400 }
-      );
+      return Response.json({ error: "User not connected to Netease" }, { status: 400 });
     }
 
     // Add tracks to playlist
@@ -168,10 +156,7 @@ export async function POST(
     });
 
     if (!playlist) {
-      return Response.json(
-        { error: 'Playlist not found' },
-        { status: 404 }
-      );
+      return Response.json({ error: "Playlist not found" }, { status: 404 });
     }
 
     // Create or update tracks and their relationships
@@ -185,9 +170,9 @@ export async function POST(
           where: { neteaseId: trackId.toString() },
           create: {
             neteaseId: trackId.toString(),
-            name: '', // These will be updated on next GET refresh
-            artist: '',
-            album: '',
+            name: "", // These will be updated on next GET refresh
+            artist: "",
+            album: "",
           },
           update: {},
         });
@@ -214,10 +199,7 @@ export async function POST(
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error('Error adding tracks:', error);
-    return Response.json(
-      { error: 'Failed to add tracks' },
-      { status: 500 }
-    );
+    console.error("Error adding tracks:", error);
+    return Response.json({ error: "Failed to add tracks" }, { status: 500 });
   }
 }

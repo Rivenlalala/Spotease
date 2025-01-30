@@ -1,17 +1,14 @@
-import { type NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
-import { Platform } from '@prisma/client';
+import { type NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
+import { Platform } from "@prisma/client";
 
 export async function GET(request: NextRequest) {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const userId = searchParams.get('userId');
+    const userId = searchParams.get("userId");
 
     if (!userId) {
-      return Response.json(
-        { error: 'User ID is required' },
-        { status: 400 }
-      );
+      return Response.json({ error: "User ID is required" }, { status: 400 });
     }
 
     // Find all playlists that have a paired playlist
@@ -31,16 +28,16 @@ export async function GET(request: NextRequest) {
             neteaseId: true,
             name: true,
             trackCount: true,
-          }
-        }
+          },
+        },
       },
       orderBy: {
-        updatedAt: 'desc'
-      }
+        updatedAt: "desc",
+      },
     });
 
     return Response.json({
-      linkedPlaylists: linkedPlaylists.map(playlist => ({
+      linkedPlaylists: linkedPlaylists.map((playlist) => ({
         spotify: {
           id: playlist.spotifyId!,
           name: playlist.name,
@@ -52,13 +49,10 @@ export async function GET(request: NextRequest) {
           trackCount: playlist.pairedWith!.trackCount,
         },
         lastSynced: playlist.lastSynced?.toISOString(),
-      }))
+      })),
     });
   } catch (error) {
-    console.error('Error fetching linked playlists:', error);
-    return Response.json(
-      { error: 'Failed to fetch linked playlists' },
-      { status: 500 }
-    );
+    console.error("Error fetching linked playlists:", error);
+    return Response.json({ error: "Failed to fetch linked playlists" }, { status: 500 });
   }
 }

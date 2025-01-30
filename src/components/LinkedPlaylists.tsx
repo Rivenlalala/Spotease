@@ -1,9 +1,9 @@
-'use client';
+"use client";
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
-import { Platform } from '@prisma/client';
-import SyncPlaylistsModal from './SyncPlaylistsModal';
-import { Track } from '@/types/track';
+import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { Platform } from "@prisma/client";
+import SyncPlaylistsModal from "./SyncPlaylistsModal";
+import { Track } from "@/types/track";
 
 interface LinkedPlaylist {
   spotify: {
@@ -47,13 +47,13 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
     try {
       const response = await fetch(`/api/playlists/linked?userId=${userId}`);
       if (!response.ok) {
-        throw new Error('Failed to load linked playlists');
+        throw new Error("Failed to load linked playlists");
       }
       const data = await response.json();
       setLinkedPlaylists(data.linkedPlaylists);
     } catch (error) {
-      console.error('Failed to load linked playlists:', error);
-      setError('Failed to load linked playlists');
+      console.error("Failed to load linked playlists:", error);
+      setError("Failed to load linked playlists");
     } finally {
       setIsLoading(false);
     }
@@ -64,42 +64,42 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
   }, [userId]);
 
   useImperativeHandle(ref, () => ({
-    loadLinkedPlaylists
+    loadLinkedPlaylists,
   }));
 
   const handleStartSync = async (spotifyId: string, neteaseId: string) => {
     try {
       const [spotifyResponse, neteaseResponse] = await Promise.all([
         fetch(`/api/playlists/spotify/${spotifyId}/tracks`),
-        fetch(`/api/playlists/netease/${neteaseId}/tracks`)
+        fetch(`/api/playlists/netease/${neteaseId}/tracks`),
       ]);
 
       if (!spotifyResponse.ok || !neteaseResponse.ok) {
-        throw new Error('Failed to fetch tracks');
+        throw new Error("Failed to fetch tracks");
       }
 
       const [spotifyData, neteaseData] = await Promise.all([
         spotifyResponse.json(),
-        neteaseResponse.json()
+        neteaseResponse.json(),
       ]);
 
-      const spotifyPlaylist = linkedPlaylists.find(p => p.spotify.id === spotifyId);
-      const neteasePlaylist = linkedPlaylists.find(p => p.netease.id === neteaseId);
+      const spotifyPlaylist = linkedPlaylists.find((p) => p.spotify.id === spotifyId);
+      const neteasePlaylist = linkedPlaylists.find((p) => p.netease.id === neteaseId);
 
       setSyncSpotifyPlaylist({
         id: spotifyId,
-        name: spotifyPlaylist?.spotify.name || '',
-        tracks: spotifyData.tracks
+        name: spotifyPlaylist?.spotify.name || "",
+        tracks: spotifyData.tracks,
       });
       setSyncNeteasePlaylist({
         id: neteaseId,
-        name: neteasePlaylist?.netease.name || '',
-        tracks: neteaseData.tracks
+        name: neteasePlaylist?.netease.name || "",
+        tracks: neteaseData.tracks,
       });
       setShowSyncModal(true);
     } catch (error) {
-      console.error('Error loading tracks:', error);
-      alert('Failed to load tracks');
+      console.error("Error loading tracks:", error);
+      alert("Failed to load tracks");
     }
   };
 
@@ -113,9 +113,7 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
 
   if (error) {
     return (
-      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">
-        {error}
-      </div>
+      <div className="bg-red-50 border border-red-200 rounded-lg p-4 text-red-600">{error}</div>
     );
   }
 
@@ -123,9 +121,7 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
     return (
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-8 text-center">
         <h3 className="text-lg font-medium text-gray-900 mb-2">No linked playlists</h3>
-        <p className="text-gray-600">
-          Link some playlists to get started with syncing.
-        </p>
+        <p className="text-gray-600">Link some playlists to get started with syncing.</p>
       </div>
     );
   }
@@ -145,8 +141,18 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
                   <p className="font-medium text-green-600">{pair.spotify.name}</p>
                   <p className="text-sm text-gray-600">{pair.spotify.trackCount} tracks</p>
                 </div>
-                <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                <svg
+                  className="w-6 h-6 text-gray-400"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M14 5l7 7m0 0l-7 7m7-7H3"
+                  />
                 </svg>
                 <div>
                   <p className="font-medium text-red-600">{pair.netease.name}</p>

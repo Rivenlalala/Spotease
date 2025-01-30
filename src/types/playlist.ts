@@ -1,4 +1,4 @@
-import { Platform } from '@prisma/client';
+import { Platform } from "@prisma/client";
 
 export interface Playlist {
   id: string;

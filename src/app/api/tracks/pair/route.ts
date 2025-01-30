@@ -1,16 +1,13 @@
-import { NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
-import { PrismaClient } from '@prisma/client';
+import { NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
+import { PrismaClient } from "@prisma/client";
 
 export async function POST(request: NextRequest) {
   try {
     const { spotifyTrackId, neteaseTrackId } = await request.json();
 
     if (!spotifyTrackId || !neteaseTrackId) {
-      return Response.json(
-        { error: 'Missing required parameters' },
-        { status: 400 }
-      );
+      return Response.json({ error: "Missing required parameters" }, { status: 400 });
     }
 
     // Find or create both tracks in a transaction
@@ -20,10 +17,10 @@ export async function POST(request: NextRequest) {
         update: {},
         create: {
           spotifyId: spotifyTrackId,
-          name: '', // These will be populated by the sync process
-          artist: '',
-          album: ''
-        }
+          name: "", // These will be populated by the sync process
+          artist: "",
+          album: "",
+        },
       });
 
       const neteaseTrack = await tx.track.upsert({
@@ -31,21 +28,21 @@ export async function POST(request: NextRequest) {
         update: {},
         create: {
           neteaseId: neteaseTrackId.toString(),
-          name: '', // These will be populated by the sync process
-          artist: '',
-          album: ''
-        }
+          name: "", // These will be populated by the sync process
+          artist: "",
+          album: "",
+        },
       });
 
       // Link the tracks together
       await tx.track.update({
         where: { id: spotifyTrack.id },
-        data: { pairedId: neteaseTrack.id }
+        data: { pairedId: neteaseTrack.id },
       });
 
       await tx.track.update({
         where: { id: neteaseTrack.id },
-        data: { pairedId: spotifyTrack.id }
+        data: { pairedId: spotifyTrack.id },
       });
 
       return [spotifyTrack, neteaseTrack];
@@ -54,13 +51,10 @@ export async function POST(request: NextRequest) {
     return Response.json({
       success: true,
       spotifyTrack,
-      neteaseTrack
+      neteaseTrack,
     });
   } catch (error) {
-    console.error('Error pairing tracks:', error);
-    return Response.json(
-      { error: 'Failed to pair tracks' },
-      { status: 500 }
-    );
+    console.error("Error pairing tracks:", error);
+    return Response.json({ error: "Failed to pair tracks" }, { status: 500 });
   }
 }

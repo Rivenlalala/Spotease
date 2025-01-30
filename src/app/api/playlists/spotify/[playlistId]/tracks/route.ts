@@ -1,14 +1,18 @@
-import { type NextRequest } from 'next/server';
-import { prisma } from '@/lib/db';
-import { refreshSpotifyToken, addTracksToPlaylist } from '@/lib/spotify';
-import { Platform } from '@prisma/client';
-import type { SpotifyTrack } from '@/types/spotify';
+import { type NextRequest } from "next/server";
+import { prisma } from "@/lib/db";
+import { refreshSpotifyToken, addTracksToPlaylist } from "@/lib/spotify";
+import { Platform } from "@prisma/client";
+import type { SpotifyTrack } from "@/types/spotify";
 
-async function fetchPlaylistTracks(playlistId: string, accessToken: string): Promise<SpotifyTrack[]> {
+async function fetchPlaylistTracks(
+  playlistId: string,
+  accessToken: string,
+): Promise<SpotifyTrack[]> {
   const tracks: SpotifyTrack[] = [];
-  let url = playlistId === 'liked-songs'
-    ? 'https://api.spotify.com/v1/me/tracks?limit=50'
-    : `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+  let url =
+    playlistId === "liked-songs"
+      ? "https://api.spotify.com/v1/me/tracks?limit=50"
+      : `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
 
   while (url) {
     const response = await fetch(url, {
@@ -18,7 +22,7 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
     });
 
     if (!response.ok) {
-      throw new Error('Failed to fetch tracks');
+      throw new Error("Failed to fetch tracks");
     }
 
     const data = await response.json();
@@ -28,7 +32,7 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
         id: item.track.id,
         name: item.track.name,
         artists: item.track.artists,
-        album: item.track.album
+        album: item.track.album,
       };
     });
     tracks.push(...items.filter(Boolean));
@@ -40,11 +44,11 @@ async function fetchPlaylistTracks(playlistId: string, accessToken: string): Pro
 
 export async function GET(
   request: NextRequest,
-  context: { params: Promise<{ playlistId: string }> }
+  context: { params: Promise<{ playlistId: string }> },
 ): Promise<Response> {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const refresh = searchParams.get('refresh') === 'true';
+    const refresh = searchParams.get("refresh") === "true";
     const { playlistId } = await context.params;
 
     // First try to get cached tracks
@@ -59,23 +63,20 @@ export async function GET(
             track: true,
           },
           orderBy: {
-            position: 'asc',
+            position: "asc",
           },
         },
       },
     });
 
     if (!playlist) {
-      return Response.json(
-        { error: 'Playlist not found' },
-        { status: 404 }
-      );
+      return Response.json({ error: "Playlist not found" }, { status: 404 });
     }
 
     // Return cached tracks if available and refresh not requested
     if (!refresh && playlist.tracks.length > 0) {
       return Response.json({
-        tracks: playlist.tracks.map(pt => ({
+        tracks: playlist.tracks.map((pt) => ({
           id: pt.track.spotifyId!,
           name: pt.track.name,
           artist: pt.track.artist,
@@ -96,10 +97,7 @@ export async function GET(
     });
 
     if (!user?.spotifyRefreshToken) {
-      return Response.json(
-        { error: 'User not connected to Spotify' },
-        { status: 400 }
-      );
+      return Response.json({ error: "User not connected to Spotify" }, { status: 400 });
     }
 
     // Refresh access token
@@ -128,12 +126,12 @@ export async function GET(
           create: {
             spotifyId: track.id,
             name: track.name,
-            artist: track.artists.map(a => a.name).join(', '),
+            artist: track.artists.map((a) => a.name).join(", "),
             album: track.album.name,
           },
           update: {
             name: track.name,
-            artist: track.artists.map(a => a.name).join(', '),
+            artist: track.artists.map((a) => a.name).join(", "),
             album: track.album.name,
           },
         });
@@ -152,7 +150,7 @@ export async function GET(
     const updatedTracks = spotifyTracks.map((track, index) => ({
       id: track.id,
       name: track.name,
-      artist: track.artists.map(a => a.name).join(', '),
+      artist: track.artists.map((a) => a.name).join(", "),
       album: track.album.name,
       position: index,
     }));
@@ -162,27 +160,21 @@ export async function GET(
       trackCount: spotifyTracks.length,
     });
   } catch (error) {
-    console.error('Error fetching tracks:', error);
-    return Response.json(
-      { error: 'Failed to fetch tracks' },
-      { status: 500 }
-    );
+    console.error("Error fetching tracks:", error);
+    return Response.json({ error: "Failed to fetch tracks" }, { status: 500 });
   }
 }
 
 export async function POST(
   request: NextRequest,
-  context: { params: Promise<{ playlistId: string }> }
+  context: { params: Promise<{ playlistId: string }> },
 ): Promise<Response> {
   try {
     const { playlistId } = await context.params;
     const { trackIds, userId } = await request.json();
 
     if (!Array.isArray(trackIds) || trackIds.length === 0 || !userId) {
-      return Response.json(
-        { error: 'Invalid request body' },
-        { status: 400 }
-      );
+      return Response.json({ error: "Invalid request body" }, { status: 400 });
     }
 
     // Get user's refresh token
@@ -194,10 +186,7 @@ export async function POST(
     });
 
     if (!user?.spotifyRefreshToken) {
-      return Response.json(
-        { error: 'User not connected to Spotify' },
-        { status: 400 }
-      );
+      return Response.json({ error: "User not connected to Spotify" }, { status: 400 });
     }
 
     // Refresh access token
@@ -213,10 +202,7 @@ export async function POST(
     });
 
     if (!playlist) {
-      return Response.json(
-        { error: 'Playlist not found' },
-        { status: 404 }
-      );
+      return Response.json({ error: "Playlist not found" }, { status: 404 });
     }
 
     // Create or update tracks and their relationships
@@ -230,9 +216,9 @@ export async function POST(
           where: { spotifyId: trackId },
           create: {
             spotifyId: trackId,
-            name: '', // These will be updated on next GET refresh
-            artist: '',
-            album: '',
+            name: "", // These will be updated on next GET refresh
+            artist: "",
+            album: "",
           },
           update: {},
         });
@@ -259,10 +245,7 @@ export async function POST(
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error('Error adding tracks:', error);
-    return Response.json(
-      { error: 'Failed to add tracks' },
-      { status: 500 }
-    );
+    console.error("Error adding tracks:", error);
+    return Response.json({ error: "Failed to add tracks" }, { status: 500 });
   }
 }

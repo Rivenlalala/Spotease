@@ -1,15 +1,12 @@
-import { prisma } from '@/lib/db';
-import { NextRequest } from 'next/server';
+import { prisma } from "@/lib/db";
+import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
     const { userId, cookie } = await request.json();
 
     if (!userId || !cookie) {
-      return Response.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     // Update user with Netease cookie
@@ -30,11 +27,11 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Netease auth error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    console.error("Netease auth error:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
     return Response.json(
       { error: `Failed to authenticate with Netease: ${errorMessage}` },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

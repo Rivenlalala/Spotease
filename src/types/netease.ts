@@ -47,9 +47,9 @@ export interface NeteasePlaylist {
 export interface NeteaseArtist {
   id: number;
   name: string;
-  tns: string[];  // Translated names
-  alias: string[];  // Alternative names
-  alia?: string[];  // Alternative names (some responses use this)
+  tns: string[]; // Translated names
+  alias: string[]; // Alternative names
+  alia?: string[]; // Alternative names (some responses use this)
 }
 
 export interface NeteaseTrack {

@@ -1,10 +1,7 @@
-import { prisma } from '@/lib/db';
-import { NextRequest } from 'next/server';
+import { prisma } from "@/lib/db";
+import { NextRequest } from "next/server";
 
-export async function GET(
-  request: NextRequest,
-  context: { params: Promise<{ userId: string }> }
-) {
+export async function GET(request: NextRequest, context: { params: Promise<{ userId: string }> }) {
   const params = await context.params;
   const { userId } = params;
   try {
@@ -27,18 +24,12 @@ export async function GET(
     });
 
     if (!user) {
-      return Response.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
+      return Response.json({ error: "User not found" }, { status: 404 });
     }
 
     return Response.json(user);
   } catch (error) {
-    console.error('Error fetching user:', error);
-    return Response.json(
-      { error: 'Internal server error' },
-      { status: 500 }
-    );
+    console.error("Error fetching user:", error);
+    return Response.json({ error: "Internal server error" }, { status: 500 });
   }
 }

@@ -1,22 +1,16 @@
-import { prisma } from '@/lib/db';
-import { NextRequest } from 'next/server';
+import { prisma } from "@/lib/db";
+import { NextRequest } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
     const { userId, profile } = await request.json();
 
     if (!userId || !profile) {
-      return Response.json(
-        { error: 'Missing required fields' },
-        { status: 400 }
-      );
+      return Response.json({ error: "Missing required fields" }, { status: 400 });
     }
 
     if (!profile.userId || !profile.nickname || !profile.avatarUrl) {
-      return Response.json(
-        { error: 'Invalid profile data' },
-        { status: 400 }
-      );
+      return Response.json({ error: "Invalid profile data" }, { status: 400 });
     }
 
     // Update user with Netease profile
@@ -39,11 +33,11 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Netease profile update error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unexpected error occurred';
+    console.error("Netease profile update error:", error);
+    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
     return Response.json(
       { error: `Failed to update Netease profile: ${errorMessage}` },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
