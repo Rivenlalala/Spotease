@@ -1,7 +1,6 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getPlaylistTracks, addTracksToPlaylist } from "@/lib/netease";
-import type { NeteaseTrack } from "@/types/netease";
 
 export const GET = async (
   request: NextRequest,

@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { Platform } from "@prisma/client";
+import { useState, type Dispatch, type SetStateAction } from "react";
 import Image from "next/image";
+
+import { type Playlist } from "@/types/playlist";
 
 interface Track {
   id: string;
@@ -11,17 +12,9 @@ interface Track {
   album: string;
 }
 
-interface Playlist {
-  id: string;
-  name: string;
-  platform: Platform;
-  trackCount: number;
-  cover: string | null;
-}
-
 interface PlaylistItemProps {
   playlist: Playlist;
-  onSelect?: (playlist: Playlist | null) => void;
+  onSelect?: Dispatch<SetStateAction<Playlist | null>>;
   isSelected?: boolean;
 }
 

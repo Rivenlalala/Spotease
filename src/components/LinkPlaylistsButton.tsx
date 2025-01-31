@@ -1,6 +1,5 @@
 "use client";
 
-import { Platform } from "@prisma/client";
 import { Playlist } from "@/types/playlist";
 
 interface LinkPlaylistsButtonProps {

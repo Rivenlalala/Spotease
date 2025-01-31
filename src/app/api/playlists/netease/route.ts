@@ -4,7 +4,6 @@ import { getUserPlaylists } from "@/lib/netease";
 import { imageUrlToBase64 } from "@/lib/image";
 import { Platform } from "@prisma/client";
 import type { NeteasePlaylist } from "@/types/netease";
-import type { Playlist } from "@/types/playlist";
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
@@ -46,15 +45,6 @@ export async function GET(request: NextRequest): Promise<Response> {
 
     // Return cached data if available and refresh not requested
     if (!refresh && cachedPlaylists.length > 0) {
-      console.log(
-        "Returning cached playlists:",
-        cachedPlaylists.map((p) => ({
-          id: p.neteaseId,
-          name: p.name,
-          hasCover: !!p.cover,
-          coverLength: p.cover?.length,
-        })),
-      );
       return Response.json({
         playlists: cachedPlaylists.map((playlist) => ({
           id: playlist.neteaseId!,
@@ -73,27 +63,13 @@ export async function GET(request: NextRequest): Promise<Response> {
       (p: NeteasePlaylist) => p.userId.toString() === user.neteaseId,
     );
 
-    console.log(
-      "Fetched playlists:",
-      userPlaylists.map((p) => ({
-        id: p.id,
-        name: p.name,
-        hasCoverUrl: !!p.coverImgUrl,
-        coverUrl: p.coverImgUrl,
-      })),
-    );
-
     // Update playlist cache one by one to avoid overwhelming the server
     for (const playlist of userPlaylists) {
       try {
-        console.log(`Processing playlist ${playlist.id} - ${playlist.name}`);
-        console.log("Cover URL:", playlist.coverImgUrl);
-
         let coverImage = null;
         if (playlist.coverImgUrl) {
           try {
             coverImage = await imageUrlToBase64(playlist.coverImgUrl);
-            console.log("Successfully converted cover to base64, length:", coverImage.length);
           } catch (error) {
             console.error("Failed to convert cover image:", error);
           }
@@ -137,16 +113,6 @@ export async function GET(request: NextRequest): Promise<Response> {
         trackCount: true,
       },
     });
-
-    console.log(
-      "Final playlists:",
-      updatedPlaylists.map((p) => ({
-        id: p.neteaseId,
-        name: p.name,
-        hasCover: !!p.cover,
-        coverLength: p.cover?.length,
-      })),
-    );
 
     return Response.json({
       playlists: updatedPlaylists.map((playlist) => ({

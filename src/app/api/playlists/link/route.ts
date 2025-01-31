@@ -25,7 +25,8 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    const neteaseDbPlaylist = await prisma.playlist.update({
+    // Update netease playlist and get the updated pair
+    await prisma.playlist.update({
       where: { id: neteasePlaylist.id },
       data: {
         pairedId: spotifyPlaylist.id,
@@ -33,7 +34,6 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Get the updated pair
     const playlistPair = await prisma.playlist.findUnique({
       where: { id: spotifyDbPlaylist.id },
       include: {

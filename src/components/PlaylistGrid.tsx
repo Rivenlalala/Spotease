@@ -1,21 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Platform } from "@prisma/client";
 import PlaylistItem from "./PlaylistItem";
 
-interface Playlist {
-  id: string;
-  name: string;
-  platform: Platform;
-  trackCount: number;
-  cover: string | null;
-}
+import { type Playlist } from "@/types/playlist";
 
 interface PlaylistGridProps {
   userId: string;
   platform: Platform;
-  onSelect?: (playlist: Playlist | null) => void;
+  onSelect?: React.Dispatch<React.SetStateAction<Playlist | null>>;
   selectedPlaylist?: Playlist | null;
 }
 
@@ -30,32 +24,35 @@ export default function PlaylistGrid({
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  async function loadPlaylists(refresh = false) {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await fetch(
-        `/api/playlists/${platform.toLowerCase()}?userId=${userId}${refresh ? "&refresh=true" : ""}`,
-      );
-      if (!response.ok) {
-        throw new Error("Failed to load playlists");
+  const loadPlaylists = useCallback(
+    async (refresh = false) => {
+      try {
+        setLoading(true);
+        setError(null);
+        const response = await fetch(
+          `/api/playlists/${platform.toLowerCase()}?userId=${userId}${refresh ? "&refresh=true" : ""}`,
+        );
+        if (!response.ok) {
+          throw new Error("Failed to load playlists");
+        }
+        const data = await response.json();
+        setPlaylists(data.playlists);
+      } catch (error) {
+        console.error("Error loading playlists:", error);
+        setError("Failed to load playlists");
+      } finally {
+        setLoading(false);
+        setIsRefreshing(false);
       }
-      const data = await response.json();
-      setPlaylists(data.playlists);
-    } catch (error) {
-      console.error("Error loading playlists:", error);
-      setError("Failed to load playlists");
-    } finally {
-      setLoading(false);
-      setIsRefreshing(false);
-    }
-  }
+    },
+    [platform, userId],
+  );
 
   useEffect(() => {
     if (userId) {
       loadPlaylists();
     }
-  }, [userId, platform]);
+  }, [userId, platform, loadPlaylists]);
 
   const handleRefresh = async () => {
     setIsRefreshing(true);

@@ -1,23 +1,9 @@
 "use client";
 
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
-import { Platform } from "@prisma/client";
+import { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
 import SyncPlaylistsModal from "./SyncPlaylistsModal";
 import { Track } from "@/types/track";
-
-interface LinkedPlaylist {
-  spotify: {
-    id: string;
-    name: string;
-    trackCount: number;
-  };
-  netease: {
-    id: string;
-    name: string;
-    trackCount: number;
-  };
-  lastSynced: string;
-}
+import { PlaylistPair } from "@/types/playlist";
 
 interface PlaylistWithTracks {
   id: string;
@@ -34,14 +20,14 @@ export interface LinkedPlaylistsRef {
 }
 
 const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ userId }, ref) => {
-  const [linkedPlaylists, setLinkedPlaylists] = useState<LinkedPlaylist[]>([]);
+  const [linkedPlaylists, setLinkedPlaylists] = useState<PlaylistPair[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncSpotifyPlaylist, setSyncSpotifyPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [syncNeteasePlaylist, setSyncNeteasePlaylist] = useState<PlaylistWithTracks | null>(null);
 
-  const loadLinkedPlaylists = async () => {
+  const loadLinkedPlaylists = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -50,18 +36,18 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
         throw new Error("Failed to load linked playlists");
       }
       const data = await response.json();
-      setLinkedPlaylists(data.linkedPlaylists);
+      setLinkedPlaylists(data);
     } catch (error) {
       console.error("Failed to load linked playlists:", error);
       setError("Failed to load linked playlists");
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [userId]);
 
   useEffect(() => {
     loadLinkedPlaylists();
-  }, [userId]);
+  }, [loadLinkedPlaylists]);
 
   useImperativeHandle(ref, () => ({
     loadLinkedPlaylists,
@@ -161,7 +147,7 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
               </div>
               <div className="flex items-center space-x-4">
                 <div className="text-sm text-gray-500">
-                  Last synced: {new Date(pair.lastSynced).toLocaleString()}
+                  Last synced: {pair.lastSynced ? new Date(pair.lastSynced).toLocaleString() : "Never"}
                 </div>
                 <button
                   onClick={() => handleStartSync(pair.spotify.id, pair.netease.id)}
@@ -190,5 +176,7 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
     </div>
   );
 });
+
+LinkedPlaylists.displayName = "LinkedPlaylists";
 
 export default LinkedPlaylists;

@@ -1,8 +1,7 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { refreshSpotifyToken, addTracksToPlaylist } from "@/lib/spotify";
-import { Platform } from "@prisma/client";
-import type { SpotifyTrack } from "@/types/spotify";
+import type { SpotifyTrack, SpotifyTrackItem } from "@/types/spotify";
 
 async function fetchPlaylistTracks(
   playlistId: string,
@@ -26,15 +25,12 @@ async function fetchPlaylistTracks(
     }
 
     const data = await response.json();
-    const items = data.items.map((item: any) => {
-      if (!item.track) return null;
-      return {
-        id: item.track.id,
-        name: item.track.name,
-        artists: item.track.artists,
-        album: item.track.album,
-      };
-    });
+    const items = data.items.map((item: SpotifyTrackItem) => ({
+      id: item.track.id,
+      name: item.track.name,
+      artists: item.track.artists,
+      album: item.track.album,
+    }));
     tracks.push(...items.filter(Boolean));
     url = data.next;
   }

@@ -3,20 +3,14 @@
 import { useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { Platform } from "@prisma/client";
+import { User } from "@/types/user";
 import NeteaseQRLoginModal from "@/components/NeteaseQRLoginModal";
 import PlaylistGrid from "@/components/PlaylistGrid";
 import LinkPlaylistsButton from "@/components/LinkPlaylistsButton";
 import LinkedPlaylists, { LinkedPlaylistsRef } from "@/components/LinkedPlaylists";
 import SyncPlaylistsModal from "@/components/SyncPlaylistsModal";
 import { Track } from "@/types/track";
-
-interface Playlist {
-  id: string;
-  name: string;
-  platform: Platform;
-  trackCount: number;
-  cover: string | null;
-}
+import { type Playlist } from "@/types/playlist";
 
 interface PlaylistWithTracks {
   id: string;
@@ -27,7 +21,7 @@ interface PlaylistWithTracks {
 export default function Dashboard() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [showNeteaseModal, setShowNeteaseModal] = useState(false);
   const [selectedSpotifyPlaylist, setSelectedSpotifyPlaylist] = useState<Playlist | null>(null);
@@ -148,11 +142,11 @@ export default function Dashboard() {
         <div className="bg-white rounded-lg shadow-lg p-6">
           <div className="flex items-center space-x-4">
             {user.image && (
-              <img src={user.image} alt={user.name} className="w-16 h-16 rounded-full" />
+              <img src={user.image ?? undefined} alt={user.name ?? undefined} className="w-16 h-16 rounded-full" />
             )}
             <div>
-              <h1 className="text-2xl font-bold">{user.name}</h1>
-              <p className="text-gray-600">{user.email}</p>
+              <h1 className="text-2xl font-bold">{user.name ?? "Anonymous"}</h1>
+              {user.email && <p className="text-gray-600">{user.email}</p>}
             </div>
           </div>
         </div>
@@ -182,7 +176,7 @@ export default function Dashboard() {
                   {user.neteaseAvatar && (
                     <img
                       src={user.neteaseAvatar}
-                      alt={user.neteaseName || "Netease Avatar"}
+                      alt={user.neteaseName ?? "Netease Avatar"}
                       className="w-8 h-8 rounded-full"
                     />
                   )}

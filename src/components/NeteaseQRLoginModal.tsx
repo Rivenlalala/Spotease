@@ -102,6 +102,9 @@ export default function NeteaseQRLoginModal({
             console.error("Update error:", error);
           }
           break;
+        default:
+          setStatus("Unknown status. Please try again.");
+          break;
         }
 
         return response.code;

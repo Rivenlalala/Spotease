@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, ReactNode } from "react";
 import { Platform } from "@prisma/client";
-import { Track } from "@/types/track";
+import type { Track } from "@/types/track";
 
 interface TrackSearchModalProps {
   onSelect: (track: Track) => void;

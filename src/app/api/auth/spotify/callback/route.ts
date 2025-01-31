@@ -17,13 +17,13 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange code for tokens
-    const { access_token, refresh_token, expires_in } = await getSpotifyTokens(code);
+    const { access_token: accessToken, refresh_token: refreshToken, expires_in: expiresIn } = await getSpotifyTokens(code);
 
     // Get user info from Spotify
-    const spotifyUser = await getSpotifyUser(access_token);
+    const spotifyUser = await getSpotifyUser(accessToken);
 
     // Calculate token expiration
-    const expiresAt = new Date(Date.now() + expires_in * 1000);
+    const expiresAt = new Date(Date.now() + expiresIn * 1000);
 
     // Create or update user
     const user = await prisma.user.upsert({
@@ -35,16 +35,16 @@ export async function GET(request: NextRequest) {
         name: spotifyUser.display_name,
         image: spotifyUser.images[0]?.url,
         spotifyId: spotifyUser.id,
-        spotifyAccessToken: access_token,
-        spotifyRefreshToken: refresh_token,
+        spotifyAccessToken: accessToken,
+        spotifyRefreshToken: refreshToken,
         spotifyExpiresAt: expiresAt,
       },
       update: {
         email: spotifyUser.email,
         name: spotifyUser.display_name,
         image: spotifyUser.images[0]?.url,
-        spotifyAccessToken: access_token,
-        spotifyRefreshToken: refresh_token,
+        spotifyAccessToken: accessToken,
+        spotifyRefreshToken: refreshToken,
         spotifyExpiresAt: expiresAt,
       },
     });

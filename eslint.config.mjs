@@ -13,12 +13,19 @@ const eslintConfig = [
   ...compat.extends(
     "next/core-web-vitals",
     "next/typescript",
-    "prettier"
+    "prettier",
   ),
   {
     rules: {
       // Possible Problems
-      "no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+      "@typescript-eslint/no-unused-vars": ["error", { 
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true,
+        "args": "after-used",
+        "vars": "all",
+      }],
+      "no-unused-vars": "off", // Turn off the base rule as it can report incorrect errors
       "no-console": ["warn", { allow: ["warn", "error"] }],
       "no-debugger": "error",
       "no-duplicate-imports": "error",
@@ -56,12 +63,12 @@ const eslintConfig = [
       "space-before-function-paren": ["error", {
         "anonymous": "always",
         "named": "never",
-        "asyncArrow": "always"
+        "asyncArrow": "always",
       }],
       "space-in-parens": ["error", "never"],
-      "space-infix-ops": "error"
-    }
-  }
+      "space-infix-ops": "error",
+    },
+  },
 ];
 
 export default eslintConfig;
