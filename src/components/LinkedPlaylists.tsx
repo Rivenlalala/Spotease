@@ -35,8 +35,8 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
       if (!response.ok) {
         throw new Error("Failed to load linked playlists");
       }
-      const data = await response.json();
-      setLinkedPlaylists(data);
+      const { linkedPlaylists } = await response.json();
+      setLinkedPlaylists(linkedPlaylists);
     } catch (error) {
       console.error("Failed to load linked playlists:", error);
       setError("Failed to load linked playlists");

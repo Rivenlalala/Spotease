@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import NeteaseQRLoginModal from "@/components/NeteaseQRLoginModal";
 
-export default function Home() {
+function HomeContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
   const error = searchParams.get("error");
@@ -15,6 +15,7 @@ export default function Home() {
     spotify_auth_failed: "Failed to authenticate with Spotify.",
     no_code: "No authorization code received from Spotify.",
   };
+
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-24">
       <div className="z-10 max-w-5xl w-full items-center justify-between font-mono text-sm">
@@ -72,5 +73,13 @@ export default function Home() {
         />
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

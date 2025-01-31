@@ -2,12 +2,12 @@ import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getPlaylistTracks, addTracksToPlaylist } from "@/lib/netease";
 
-export const GET = async (
+export async function GET(
   request: NextRequest,
-  { params }: { params: { playlistId: string } },
-): Promise<Response> => {
+  context: { params: Promise<{ playlistId: string }> },
+): Promise<Response> {
   try {
-    const { playlistId } = await params;
+    const { playlistId } = await context.params;
 
     // First try to get cached tracks
     const playlist = await prisma.playlist.findUnique({
@@ -123,10 +123,10 @@ export const GET = async (
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { playlistId: string } },
+  context: { params: Promise<{ playlistId: string }> },
 ): Promise<Response> {
   try {
-    const { playlistId } = params;
+    const { playlistId } = await context.params;
     const { trackIds, userId } = await request.json();
 
     if (!Array.isArray(trackIds) || trackIds.length === 0 || !userId) {

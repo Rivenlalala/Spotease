@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { Platform } from "@prisma/client";
 import { User } from "@/types/user";
@@ -18,7 +18,7 @@ interface PlaylistWithTracks {
   tracks: Track[];
 }
 
-export default function Dashboard() {
+function DashboardContent() {
   const searchParams = useSearchParams();
   const userId = searchParams.get("userId");
   const [user, setUser] = useState<User | null>(null);
@@ -261,5 +261,13 @@ export default function Dashboard() {
         />
       )}
     </div>
+  );
+}
+
+export default function Dashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <DashboardContent />
+    </Suspense>
   );
 }
