@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, ReactNode } from "react";
 import { Platform } from "@prisma/client";
+import { toast } from "react-hot-toast";
 import type { Track } from "@/types/track";
 
 interface TrackSearchModalProps {
@@ -29,7 +30,7 @@ export default function TrackSearchModal({
   const [searchResults, setSearchResults] = useState<Track[]>([]);
 
   const handleSearch = useCallback(
-    async (forceRefresh?: boolean) => {
+    async () => {
       if (!query.trim()) return;
 
       setIsSearching(true);
@@ -38,9 +39,6 @@ export default function TrackSearchModal({
         url.searchParams.set("platform", platform);
         url.searchParams.set("query", query);
         url.searchParams.set("userId", userId);
-        if (forceRefresh) {
-          url.searchParams.set("refresh", "true");
-        }
 
         const response = await fetch(url);
         if (!response.ok) {
@@ -50,6 +48,7 @@ export default function TrackSearchModal({
         setSearchResults(data.tracks);
       } catch (error) {
         console.error("Failed to search tracks:", error);
+        toast.error("Failed to search tracks");
       } finally {
         setIsSearching(false);
       }
@@ -86,14 +85,13 @@ export default function TrackSearchModal({
         throw new Error("Failed to add track to playlist");
       }
 
-      // Refresh search results to reflect the new pairing
-      await handleSearch(true);
-
-      // Call onSelect to update UI
+      // Pass the track to parent for local state updates
       onSelect(track);
+      onClose();
+      toast.success("Track added to playlist");
     } catch (error) {
       console.error("Failed to add track:", error);
-      alert("Failed to add track to playlist");
+      toast.error("Failed to add track to playlist");
     } finally {
       setIsAdding(false);
     }
@@ -101,7 +99,7 @@ export default function TrackSearchModal({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[200]">
-      <div className="bg-white rounded-lg p-6 max-w-2xl w-full m-4">
+      <div className="bg-white rounded-lg p-6 max-w-2xl w-full m-4 max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-xl font-bold">
             Search {platform === "SPOTIFY" ? "Spotify" : "Netease"} Tracks
@@ -128,7 +126,7 @@ export default function TrackSearchModal({
             className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
           <button
-            onClick={() => handleSearch()}
+            onClick={handleSearch}
             disabled={isSearching || !query.trim()}
             className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors disabled:opacity-50"
           >
@@ -152,12 +150,17 @@ export default function TrackSearchModal({
                   key={track.id}
                   onClick={() => handleTrackSelect(track)}
                   disabled={isAdding}
-                  className="w-full text-left p-3 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50"
+                  className="w-full text-left p-3 hover:bg-gray-50 rounded-lg transition-colors disabled:opacity-50 flex items-center justify-between"
                 >
-                  <p className="font-medium">{track.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {track.artist} • {track.album}
-                  </p>
+                  <div>
+                    <p className="font-medium">{track.name}</p>
+                    <p className="text-sm text-gray-600">
+                      {track.artist} • {track.album}
+                    </p>
+                  </div>
+                  {isAdding && (
+                    <div className="w-5 h-5 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mr-2" />
+                  )}
                 </button>
               ))}
             </div>

@@ -1,56 +1,94 @@
-import { NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { spotifyTrackId, neteaseTrackId } = await request.json();
+    const { spotifyTrackId, neteaseTrackId, sourceTrackId, targetTrackId, platform } = await request.json();
 
-    if (!spotifyTrackId || !neteaseTrackId) {
-      return Response.json({ error: "Missing required parameters" }, { status: 400 });
+    // Support both direct pairing and platform-based pairing
+    let finalSpotifyId: string;
+    let finalNeteaseId: string;
+
+    if (spotifyTrackId && neteaseTrackId) {
+      finalSpotifyId = spotifyTrackId;
+      finalNeteaseId = neteaseTrackId;
+    } else if (sourceTrackId && targetTrackId && platform) {
+      // Determine which ID is for which platform
+      if (platform === "SPOTIFY") {
+        finalSpotifyId = targetTrackId;
+        finalNeteaseId = sourceTrackId;
+      } else {
+        finalSpotifyId = sourceTrackId;
+        finalNeteaseId = targetTrackId;
+      }
+    } else {
+      return Response.json(
+        { error: "Invalid request. Must provide either spotifyTrackId and neteaseTrackId, or sourceTrackId, targetTrackId, and platform" },
+        { status: 400 },
+      );
     }
 
-    // Find or create both tracks in a transaction
-    const [spotifyTrack, neteaseTrack] = await prisma.$transaction(async (tx) => {
-      const spotifyTrack = await tx.track.upsert({
-        where: { spotifyId: spotifyTrackId },
-        update: {},
-        create: {
-          spotifyId: spotifyTrackId,
-          name: "", // These will be populated by the sync process
-          artist: "",
-          album: "",
+    // Find both tracks
+    const [spotifyTrack, neteaseTrack] = await Promise.all([
+      prisma.track.findUnique({
+        where: { spotifyId: finalSpotifyId },
+        include: {
+          playlists: {
+            select: {
+              playlistId: true,
+            },
+          },
         },
-      });
-
-      const neteaseTrack = await tx.track.upsert({
-        where: { neteaseId: neteaseTrackId.toString() },
-        update: {},
-        create: {
-          neteaseId: neteaseTrackId.toString(),
-          name: "", // These will be populated by the sync process
-          artist: "",
-          album: "",
+      }),
+      prisma.track.findUnique({
+        where: { neteaseId: finalNeteaseId },
+        include: {
+          playlists: {
+            select: {
+              playlistId: true,
+            },
+          },
         },
-      });
+      }),
+    ]);
 
-      // Link the tracks together
-      await tx.track.update({
+    if (!spotifyTrack || !neteaseTrack) {
+      return Response.json({ error: "One or both tracks not found" }, { status: 404 });
+    }
+
+    // Find any existing pairs
+    if (spotifyTrack.pairedId || neteaseTrack.pairedId) {
+      return Response.json({ error: "One or both tracks are already paired" }, { status: 400 });
+    }
+
+    // Update both tracks to pair them
+    await prisma.$transaction([
+      prisma.track.update({
         where: { id: spotifyTrack.id },
         data: { pairedId: neteaseTrack.id },
-      });
-
-      await tx.track.update({
+      }),
+      prisma.track.update({
         where: { id: neteaseTrack.id },
         data: { pairedId: spotifyTrack.id },
-      });
-
-      return [spotifyTrack, neteaseTrack];
-    });
+      }),
+    ]);
 
     return Response.json({
       success: true,
-      spotifyTrack,
-      neteaseTrack,
+      pairedTracks: {
+        spotify: {
+          id: spotifyTrack.spotifyId,
+          name: spotifyTrack.name,
+          artist: spotifyTrack.artist,
+          album: spotifyTrack.album,
+        },
+        netease: {
+          id: neteaseTrack.neteaseId,
+          name: neteaseTrack.name,
+          artist: neteaseTrack.artist,
+          album: neteaseTrack.album,
+        },
+      },
     });
   } catch (error) {
     console.error("Error pairing tracks:", error);

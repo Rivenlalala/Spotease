@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Platform } from "@prisma/client";
+import { toast } from "react-hot-toast";
 import TrackSearchModal from "./TrackSearchModal";
 import { Track } from "@/types/track";
 
@@ -18,7 +18,7 @@ interface SyncPlaylistsModalProps {
     tracks: Track[];
   };
   onClose: () => void;
-  onPlaylistsUpdated?: () => void; // Callback to refresh LinkedPlaylists
+  onPlaylistsUpdated?: () => void;
 }
 
 interface TrackPair {
@@ -30,44 +30,31 @@ interface TrackPair {
 type SearchPlatform = "SPOTIFY" | "NETEASE";
 
 function calculateMatchConfidence(spotifyTrack: Track, neteaseTrack: Track): number {
-  // Normalize strings for comparison
   const normalize = (str: string) =>
     str
       .toLowerCase()
-      // Remove featuring/feat./ft.
       .replace(/\(?(?:feat|ft|featuring)\.?\s+[^)]+\)?/g, "")
-      // Remove content in parentheses
       .replace(/\([^)]+\)/g, "")
-      // Remove special characters
       .replace(/[^\w\s]/g, "")
-      // Normalize spaces
       .replace(/\s+/g, " ")
       .trim();
 
-  // Get both normal and simplified versions of track names
   const spotifyName = normalize(spotifyTrack.name);
   const neteaseName = normalize(neteaseTrack.name);
   const spotifyArtist = normalize(spotifyTrack.artist);
   const neteaseArtist = normalize(neteaseTrack.artist);
 
-  // Calculate exact match bonus
   const exactNameMatch = spotifyName === neteaseName ? 0.2 : 0;
   const exactArtistMatch = spotifyArtist === neteaseArtist ? 0.2 : 0;
 
-  // Calculate Levenshtein distance for name and artist
   const nameDistance = levenshteinDistance(spotifyName, neteaseName);
   const artistDistance = levenshteinDistance(spotifyArtist, neteaseArtist);
 
-  // Calculate similarity scores (0-1)
   const nameSimilarity = 1 - nameDistance / Math.max(spotifyName.length, neteaseName.length);
-  const artistSimilarity =
-    1 - artistDistance / Math.max(spotifyArtist.length, neteaseArtist.length);
+  const artistSimilarity = 1 - artistDistance / Math.max(spotifyArtist.length, neteaseArtist.length);
 
-  // Weight the scores (name is slightly more important) and add exact match bonuses
-  const confidence =
-    nameSimilarity * 0.6 + artistSimilarity * 0.4 + exactNameMatch + exactArtistMatch;
+  const confidence = nameSimilarity * 0.6 + artistSimilarity * 0.4 + exactNameMatch + exactArtistMatch;
 
-  // Cap the confidence at 1.0
   return Math.min(confidence, 1);
 }
 
@@ -87,9 +74,9 @@ function levenshteinDistance(str1: string, str2: string): number {
         dp[i][j] = dp[i - 1][j - 1];
       } else {
         dp[i][j] = Math.min(
-          dp[i - 1][j - 1] + 1, // substitution
-          dp[i - 1][j] + 1, // deletion
-          dp[i][j - 1] + 1, // insertion
+          dp[i - 1][j - 1] + 1,
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
         );
       }
     }
@@ -110,30 +97,21 @@ export default function SyncPlaylistsModal({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchPlatform, setSearchPlatform] = useState<SearchPlatform>("NETEASE");
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
+  
+  // Keep local copies of playlist data
+  const [localSpotifyTracks, setLocalSpotifyTracks] = useState(spotifyPlaylist.tracks);
+  const [localNeteaseTracks, setLocalNeteaseTracks] = useState(neteasePlaylist.tracks);
 
-  const refreshPlaylistTracks = useCallback(async (platform: Platform, playlistId: string) => {
-    // Force refresh by adding refresh=true parameter
-    const response = await fetch(
-      `/api/playlists/${platform.toLowerCase()}/${playlistId}/tracks?refresh=true`,
-    );
-    if (!response.ok) {
-      throw new Error(`Failed to refresh ${platform} tracks`);
-    }
-    const data = await response.json();
-    return data.tracks;
-  }, []);
-
+  // Initialize track pairs
   useEffect(() => {
-    // Create pairs from both Spotify and Netease tracks
     const pairs: TrackPair[] = [];
     const pairedNeteaseIds = new Set<string>();
 
-    // First, match Spotify tracks with Netease tracks
-    spotifyPlaylist.tracks.forEach((spotifyTrack) => {
+    localSpotifyTracks.forEach((spotifyTrack) => {
       let bestMatch: Track | undefined;
       let bestConfidence = 0;
 
-      neteasePlaylist.tracks.forEach((neteaseTrack) => {
+      localNeteaseTracks.forEach((neteaseTrack) => {
         const confidence = calculateMatchConfidence(spotifyTrack, neteaseTrack);
         if (confidence > 0.8 && confidence > bestConfidence) {
           bestMatch = neteaseTrack;
@@ -152,8 +130,7 @@ export default function SyncPlaylistsModal({
       }
     });
 
-    // Then add remaining unpaired Netease tracks
-    neteasePlaylist.tracks
+    localNeteaseTracks
       .filter((track) => !pairedNeteaseIds.has(track.id))
       .forEach((track) => {
         pairs.push({
@@ -164,88 +141,74 @@ export default function SyncPlaylistsModal({
 
     setTrackPairs(pairs);
     setIsLoading(false);
-  }, [spotifyPlaylist.tracks, neteasePlaylist.tracks]);
+  }, [localSpotifyTracks, localNeteaseTracks]);
+
+  const handleTrackAdd = useCallback(
+    (track: Track, platform: SearchPlatform) => {
+      // Update local playlist tracks
+      if (platform === "SPOTIFY") {
+        setLocalSpotifyTracks(prev => [...prev, track]);
+      } else {
+        setLocalNeteaseTracks(prev => [...prev, track]);
+      }
+    },
+    [],
+  );
 
   const handlePairTracks = useCallback(
-    async (spotifyTrackId: string, neteaseTrackId: string) => {
+    async (sourceTrackId: string, targetTrackId: string, platform: SearchPlatform) => {
       try {
-        // First add track to respective playlists
-        await Promise.all([
-          fetch(`/api/playlists/spotify/${spotifyPlaylist.id}/tracks`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              trackIds: [spotifyTrackId],
-              userId,
-            }),
-          }),
-          fetch(`/api/playlists/netease/${neteasePlaylist.id}/tracks`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              trackIds: [neteaseTrackId],
-              userId,
-            }),
-          }),
-        ]);
-
-        // Then pair the tracks
-        const pairResponse = await fetch("/api/tracks/pair", {
+        const response = await fetch("/api/tracks/pair", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            spotifyTrackId,
-            neteaseTrackId,
+            sourceTrackId,
+            targetTrackId,
+            platform,
           }),
         });
 
-        if (!pairResponse.ok) {
+        if (!response.ok) {
           throw new Error("Failed to pair tracks");
         }
 
-        // Then refresh playlists to get updated track lists
-        const [updatedSpotifyTracks, updatedNeteaseTracks] = await Promise.all([
-          refreshPlaylistTracks(Platform.SPOTIFY, spotifyPlaylist.id),
-          refreshPlaylistTracks(Platform.NETEASE, neteasePlaylist.id),
-        ]);
+        const data = await response.json();
 
-        // Update track pairs with latest data
+        // Update track pairs locally
         setTrackPairs((pairs) => {
           const updatedPairs = [...pairs];
           const pairIndex = pairs.findIndex(
             (p) =>
-              (p.spotifyTrack?.id === spotifyTrackId && !p.neteaseTrack) ||
-              (p.neteaseTrack?.id === neteaseTrackId && !p.spotifyTrack),
+              (p.spotifyTrack?.id === sourceTrackId && !p.neteaseTrack) ||
+              (p.neteaseTrack?.id === sourceTrackId && !p.spotifyTrack),
           );
 
           if (pairIndex !== -1) {
-            const spotifyTrack = updatedSpotifyTracks.find((t: Track) => t.id === spotifyTrackId);
-            const neteaseTrack = updatedNeteaseTracks.find((t: Track) => t.id === neteaseTrackId);
+            const spotifyTrack = platform === "SPOTIFY" ? data.pairedTracks.spotify : data.pairedTracks.netease;
+            const neteaseTrack = platform === "NETEASE" ? data.pairedTracks.netease : data.pairedTracks.spotify;
+            
             updatedPairs[pairIndex] = {
               spotifyTrack,
               neteaseTrack,
-              confidence: 1, // Mark as manually paired
+              confidence: 1,
             };
           }
 
           return updatedPairs;
         });
 
-        // Update playlist tracks in parent
-        spotifyPlaylist.tracks = updatedSpotifyTracks;
-        neteasePlaylist.tracks = updatedNeteaseTracks;
+        // Notify parent of successful update
+        onPlaylistsUpdated?.();
+        
+        toast.success("Tracks paired successfully");
       } catch (error) {
         console.error("Failed to pair tracks:", error);
-        alert("Failed to pair tracks");
+        toast.error("Failed to pair tracks");
       }
     },
-    [userId, refreshPlaylistTracks, spotifyPlaylist, neteasePlaylist],
+    [onPlaylistsUpdated],
   );
 
   if (isLoading) {
@@ -256,7 +219,7 @@ export default function SyncPlaylistsModal({
         </div>
       </div>
     );
-  }
+  }  
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center overflow-auto z-[100]">
@@ -295,7 +258,6 @@ export default function SyncPlaylistsModal({
                   pair.confidence && pair.confidence > 0.8 ? "bg-green-50" : "bg-gray-50"
                 }`}
               >
-                {/* Spotify Track or Add Button */}
                 <div className="flex-1">
                   {pair.spotifyTrack ? (
                     <div>
@@ -319,7 +281,6 @@ export default function SyncPlaylistsModal({
                   )}
                 </div>
 
-                {/* Arrow or Match Indicator */}
                 <div className="flex-shrink-0 w-16 flex justify-center">
                   {pair.confidence && pair.confidence > 0.8 ? (
                     <svg
@@ -352,7 +313,6 @@ export default function SyncPlaylistsModal({
                   )}
                 </div>
 
-                {/* Netease Track or Add Button */}
                 <div className="flex-1">
                   {pair.neteaseTrack ? (
                     <div>
@@ -388,13 +348,43 @@ export default function SyncPlaylistsModal({
           sourceTrack={selectedTrack}
           playlistId={searchPlatform === "SPOTIFY" ? spotifyPlaylist.id : neteasePlaylist.id}
           onSelect={async (track: Track) => {
-            if (searchPlatform === "NETEASE") {
-              await handlePairTracks(selectedTrack.id, track.id);
-              onPlaylistsUpdated?.();
-            } else {
-              await handlePairTracks(track.id, selectedTrack.id);
-              onPlaylistsUpdated?.();
-            }
+            // First update local state
+            handleTrackAdd(track, searchPlatform);
+            
+            // Then pair the tracks
+            await handlePairTracks(selectedTrack.id, track.id, searchPlatform);
+
+            // Update track pairs with new track
+            setTrackPairs((pairs) => {
+              const updatedPairs = [...pairs];
+              const pairIndex = pairs.findIndex(
+                (p) =>
+                  (p.spotifyTrack?.id === selectedTrack.id && !p.neteaseTrack) ||
+                  (p.neteaseTrack?.id === selectedTrack.id && !p.spotifyTrack),
+              );
+
+              if (pairIndex !== -1) {
+                if (searchPlatform === "SPOTIFY") {
+                  updatedPairs[pairIndex] = {
+                    ...updatedPairs[pairIndex],
+                    spotifyTrack: track,
+                    confidence: 1,
+                  };
+                } else {
+                  updatedPairs[pairIndex] = {
+                    ...updatedPairs[pairIndex],
+                    neteaseTrack: track,
+                    confidence: 1,
+                  };
+                }
+              }
+
+              return updatedPairs;
+            });
+
+            // If playlists were successfully updated, notify parent
+            onPlaylistsUpdated?.();
+            
             setShowSearchModal(false);
             setSelectedTrack(null);
           }}

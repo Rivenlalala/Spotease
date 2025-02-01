@@ -17,6 +17,7 @@ interface LinkedPlaylistsProps {
 
 export interface LinkedPlaylistsRef {
   loadLinkedPlaylists: () => Promise<void>;
+  updatePairedTracks: (spotifyTrack: Track | null, neteaseTrack: Track | null) => void;
 }
 
 const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ userId }, ref) => {
@@ -51,6 +52,28 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
 
   useImperativeHandle(ref, () => ({
     loadLinkedPlaylists,
+    updatePairedTracks: (spotifyTrack: Track | null, neteaseTrack: Track | null) => {
+      if (!spotifyTrack && !neteaseTrack) return;
+
+      setLinkedPlaylists(playlists => playlists.map(pair => {
+        const updated = { ...pair };
+
+        if (spotifyTrack && syncSpotifyPlaylist && pair.spotify.id === syncSpotifyPlaylist.id) {
+          updated.spotify = {
+            ...updated.spotify,
+            trackCount: updated.spotify.trackCount + 1,
+          };
+        }
+        if (neteaseTrack && syncNeteasePlaylist && pair.netease.id === syncNeteasePlaylist.id) {
+          updated.netease = {
+            ...updated.netease,
+            trackCount: updated.netease.trackCount + 1,
+          };
+        }
+
+        return updated;
+      }));
+    },
   }));
 
   const handleStartSync = async (spotifyId: string, neteaseId: string) => {
@@ -146,14 +169,11 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
                 </div>
               </div>
               <div className="flex items-center space-x-4">
-                <div className="text-sm text-gray-500">
-                  Last synced: {pair.lastSynced ? new Date(pair.lastSynced).toLocaleString() : "Never"}
-                </div>
                 <button
                   onClick={() => handleStartSync(pair.spotify.id, pair.netease.id)}
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                 >
-                  Sync Now
+                  Manuel Sync
                 </button>
               </div>
             </div>
