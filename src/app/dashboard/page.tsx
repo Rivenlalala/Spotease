@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef, Suspense } from "react";
+import { useEffect, useState, useRef, Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { Platform } from "@prisma/client";
+import { toast } from "react-hot-toast";
 import { User } from "@/types/user";
 import NeteaseQRLoginModal from "@/components/NeteaseQRLoginModal";
 import PlaylistGrid from "@/components/PlaylistGrid";
@@ -30,7 +31,7 @@ function DashboardContent() {
   const [syncSpotifyPlaylist, setSyncSpotifyPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [syncNeteasePlaylist, setSyncNeteasePlaylist] = useState<PlaylistWithTracks | null>(null);
 
-  async function loadUser() {
+  const loadUser = useCallback(async () => {
     if (!userId) return;
     try {
       const response = await fetch(`/api/users/${userId}`);
@@ -43,11 +44,11 @@ function DashboardContent() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [userId]);
 
   useEffect(() => {
     loadUser();
-  }, [userId]);
+  }, [loadUser]);
 
   const linkedPlaylistsRef = useRef<LinkedPlaylistsRef>(null);
 
@@ -107,7 +108,7 @@ function DashboardContent() {
       setSelectedNeteasePlaylist(null);
     } catch (error) {
       console.error("Error linking playlists:", error);
-      alert("Failed to link playlists");
+      toast.error("Failed to link playlists");
     }
   }
 
