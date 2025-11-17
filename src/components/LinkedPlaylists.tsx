@@ -173,7 +173,7 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
                   onClick={() => handleStartSync(pair.spotify.id, pair.netease.id)}
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                 >
-                  Manuel Sync
+                  Manual Sync
                 </button>
               </div>
             </div>

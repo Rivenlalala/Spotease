@@ -1,15 +1,16 @@
 "use client";
 
 import { useState, useEffect, useCallback, ReactNode } from "react";
-import { Platform } from "@prisma/client";
 import { toast } from "react-hot-toast";
 import type { Track } from "@/types/track";
+
+type SearchPlatform = "SPOTIFY" | "NETEASE";
 
 interface TrackSearchModalProps {
   onSelect: (track: Track) => void;
   onClose: () => void;
   userId: string;
-  platform: Platform;
+  platform: SearchPlatform;
   sourceTrack?: Track; // Track from the other platform to search for
   playlistId: string; // ID of the playlist to add tracks to
 }
@@ -28,6 +29,7 @@ export default function TrackSearchModal({
   const [isSearching, setIsSearching] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
   const [searchResults, setSearchResults] = useState<Track[]>([]);
+  const [hasAutoSearched, setHasAutoSearched] = useState(false);
 
   const handleSearch = useCallback(
     async () => {
@@ -58,10 +60,12 @@ export default function TrackSearchModal({
 
   // Auto-search when component mounts if we have a source track
   useEffect(() => {
-    if (sourceTrack) {
+    if (sourceTrack && !hasAutoSearched) {
+      setHasAutoSearched(true);
       handleSearch();
     }
-  }, [sourceTrack, handleSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sourceTrack, hasAutoSearched]);
 
   async function handleTrackSelect(track: Track) {
     setIsAdding(true);
