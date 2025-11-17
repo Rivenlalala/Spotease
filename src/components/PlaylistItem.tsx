@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, type Dispatch, type SetStateAction } from "react";
-
+import { ChevronRight, RefreshCw, Check, Music } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { type Playlist } from "@/types/playlist";
 
 interface Track {
@@ -24,7 +30,7 @@ export default function PlaylistItem({ playlist, onSelect, isSelected }: Playlis
   const [isRefreshingTracks, setIsRefreshingTracks] = useState(false);
 
   const handleToggleExpand = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent playlist selection when clicking triangle
+    e.stopPropagation();
 
     if (!isExpanded && tracks.length === 0) {
       await loadTracks();
@@ -33,7 +39,7 @@ export default function PlaylistItem({ playlist, onSelect, isSelected }: Playlis
   };
 
   const handleRefreshTracks = async (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent playlist selection when clicking refresh
+    e.stopPropagation();
     await loadTracks(true);
   };
 
@@ -67,142 +73,115 @@ export default function PlaylistItem({ playlist, onSelect, isSelected }: Playlis
   };
 
   return (
-    <div
-      className={`
-        bg-white rounded-lg shadow-sm overflow-hidden
-        transition-all duration-200
-        ${isSelected ? "ring-2 ring-blue-500" : ""}
-      `}
+    <Card
+      className={cn(
+        "overflow-hidden transition-all duration-200 hover:shadow-md",
+        isSelected && "ring-2 ring-primary shadow-md",
+      )}
     >
-      <div
-        className={`
-          flex items-center space-x-4 p-3 cursor-pointer
-          ${isSelected ? "bg-blue-50" : "hover:shadow-md"}
-          transition-shadow duration-200
-        `}
-        onClick={handleClick}
-      >
-        <button
-          className="flex-none p-1 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          onClick={handleToggleExpand}
-          aria-label={isExpanded ? "Collapse playlist" : "Expand playlist"}
-        >
-          <svg
-            className={`w-4 h-4 transform transition-transform duration-200 ${
-              isExpanded ? "rotate-90" : ""
-            }`}
-            fill="none"
-            stroke="currentColor"
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </button>
-
-        <div className="flex-none w-16 h-16 relative rounded-md overflow-hidden">
-          {playlist.cover ? (
-            <img src={playlist.cover} alt={playlist.name} className="w-full h-full object-cover" />
-          ) : (
-            <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-              <svg
-                className="w-6 h-6 text-gray-400 opacity-50"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3"
-                />
-              </svg>
-            </div>
+      <CardContent className="p-0">
+        <div
+          className={cn(
+            "flex items-center gap-4 p-4 cursor-pointer transition-colors",
+            isSelected ? "bg-primary/5" : "hover:bg-muted/50",
           )}
-        </div>
+          onClick={handleClick}
+        >
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0"
+            onClick={handleToggleExpand}
+            aria-label={isExpanded ? "Collapse playlist" : "Expand playlist"}
+          >
+            <ChevronRight
+              className={cn("h-4 w-4 transition-transform duration-200", isExpanded && "rotate-90")}
+            />
+          </Button>
 
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-gray-900 truncate">{playlist.name}</p>
-          <p className="text-sm text-gray-500">
-            {playlist.trackCount} {playlist.trackCount === 1 ? "track" : "tracks"}
-          </p>
+          <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-md bg-muted">
+            {playlist.cover ? (
+              <img
+                src={playlist.cover}
+                alt={playlist.name}
+                className="h-full w-full object-cover"
+              />
+            ) : (
+              <div className="flex h-full w-full items-center justify-center">
+                <Music className="h-6 w-6 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-semibold">{playlist.name}</p>
+            <p className="text-sm text-muted-foreground">
+              {playlist.trackCount} {playlist.trackCount === 1 ? "track" : "tracks"}
+            </p>
+          </div>
+
+          {isExpanded && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              onClick={handleRefreshTracks}
+              disabled={isRefreshingTracks}
+              aria-label="Refresh tracks"
+            >
+              <RefreshCw className={cn("h-4 w-4", isRefreshingTracks && "animate-spin")} />
+            </Button>
+          )}
+
+          {isSelected && (
+            <Badge variant="default" className="shrink-0">
+              <Check className="mr-1 h-3 w-3" />
+              Selected
+            </Badge>
+          )}
         </div>
 
         {isExpanded && (
-          <button
-            className={`
-              flex-none p-1.5 rounded-full
-              ${
-          isRefreshingTracks
-            ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-            : "hover:bg-gray-100 text-gray-600 hover:text-gray-900"
-          }
-              transition-colors duration-200
-            `}
-            onClick={handleRefreshTracks}
-            disabled={isRefreshingTracks}
-            aria-label="Refresh tracks"
-          >
-            <svg
-              className={`w-4 h-4 ${isRefreshingTracks ? "animate-spin" : ""}`}
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"
-              />
-            </svg>
-          </button>
-        )}
-
-        {isSelected && (
-          <div className="flex-none">
-            <div className="w-4 h-4 rounded-full bg-blue-500 flex items-center justify-center">
-              <svg
-                className="w-3 h-3 text-white"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M5 13l4 4L19 7"
-                />
-              </svg>
-            </div>
+          <div className="border-t">
+            {isLoadingTracks ? (
+              <div className="space-y-3 p-4">
+                {[...Array(3)].map((_, i) => (
+                  <div key={i} className="flex items-center gap-3">
+                    <Skeleton className="h-4 w-8" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : tracks.length === 0 ? (
+              <div className="p-6 text-center text-muted-foreground">No tracks found</div>
+            ) : (
+              <ScrollArea className="h-[300px]">
+                <div className="divide-y">
+                  {tracks.map((track, index) => (
+                    <div
+                      key={track.id}
+                      className="flex items-center gap-3 px-4 py-3 transition-colors hover:bg-muted/50"
+                    >
+                      <span className="w-8 text-right text-sm text-muted-foreground">
+                        {index + 1}
+                      </span>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium">{track.name}</p>
+                        <p className="truncate text-xs text-muted-foreground">
+                          {track.artist} &bull; {track.album}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
           </div>
         )}
-      </div>
-
-      {isExpanded && (
-        <div className="border-t border-gray-100">
-          {isLoadingTracks ? (
-            <div className="p-4 text-center text-gray-500">Loading tracks...</div>
-          ) : tracks.length === 0 ? (
-            <div className="p-4 text-center text-gray-500">No tracks found</div>
-          ) : (
-            <div className="divide-y divide-gray-100">
-              {tracks.map((track, index) => (
-                <div key={track.id} className="flex items-center px-4 py-2 hover:bg-gray-50">
-                  <span className="flex-none w-8 text-sm text-gray-400">{index + 1}</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{track.name}</p>
-                    <p className="text-sm text-gray-500 truncate">
-                      {track.artist} • {track.album}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

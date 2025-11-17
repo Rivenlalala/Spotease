@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { getSpotifyTokens, getSpotifyUser } from "@/lib/spotify";
-import { NextRequest } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
   try {
@@ -49,8 +49,19 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    // Redirect to dashboard with success
-    return Response.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?userId=${user.id}`);
+    // Redirect to dashboard with success and set session cookie
+    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?userId=${user.id}`);
+
+    // Set session cookie (expires in 30 days)
+    response.cookies.set("spotease_user_id", user.id, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+      path: "/",
+    });
+
+    return response;
   } catch (error) {
     console.error("Spotify callback error:", error);
     return Response.redirect(`${process.env.NEXT_PUBLIC_APP_URL}?error=spotify_auth_failed`);

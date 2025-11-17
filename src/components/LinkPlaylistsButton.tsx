@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import { toast } from "react-hot-toast";
+import { Link2, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Playlist } from "@/types/playlist";
 
 interface LinkPlaylistsButtonProps {
@@ -24,67 +27,65 @@ export default function LinkPlaylistsButton({
   }
 
   return (
-    <button
-      onClick={async () => {
-        setIsLinking(true);
+    <Card className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 transform bg-gradient-to-r from-green-500 to-red-500 p-1 shadow-2xl">
+      <Button
+        onClick={async () => {
+          setIsLinking(true);
 
-        try {
-          const response = await fetch("/api/playlists/link", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              spotifyId: spotifyPlaylist.id,
-              neteaseId: neteasePlaylist.id,
-              userId: userId,
-            }),
-          });
+          try {
+            const response = await fetch("/api/playlists/link", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                spotifyId: spotifyPlaylist.id,
+                neteaseId: neteasePlaylist.id,
+                userId: userId,
+              }),
+            });
 
-          if (!response.ok) {
-            throw new Error("Failed to link playlists");
-          }
+            if (!response.ok) {
+              throw new Error("Failed to link playlists");
+            }
 
-          const data = await response.json();
+            const data = await response.json();
 
-          if (data.success) {
-            toast.success("Playlists linked successfully!");
-            onLinkClick();
-          } else {
+            if (data.success) {
+              toast.success("Playlists linked successfully!");
+              onLinkClick();
+            } else {
+              toast.error("Failed to link playlists");
+            }
+          } catch (error) {
+            console.error("Error linking playlists:", error);
             toast.error("Failed to link playlists");
+          } finally {
+            setIsLinking(false);
           }
-        } catch (error) {
-          console.error("Error linking playlists:", error);
-          toast.error("Failed to link playlists");
-        } finally {
-          setIsLinking(false);
-        }
-      }}
-      disabled={isLinking}
-      className="fixed bottom-8 left-1/2 transform -translate-x-1/2 z-50 bg-gradient-to-r from-green-500 to-red-500 text-white px-6 py-3 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-200 flex items-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed"
-    >
-      {isLinking ? (
-        <>
-          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          <span className="text-sm font-medium">Linking playlists...</span>
-        </>
-      ) : (
-        <>
-          <div className="text-sm">
-            <span className="font-medium">{spotifyPlaylist.name}</span>
-            <span className="mx-2">⟷</span>
-            <span className="font-medium">{neteasePlaylist.name}</span>
-          </div>
-          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"
-            />
-          </svg>
-        </>
-      )}
-    </button>
+        }}
+        disabled={isLinking}
+        variant="secondary"
+        size="lg"
+        className="gap-3 bg-white px-6 py-6 text-base font-medium shadow-none hover:bg-gray-50"
+      >
+        {isLinking ? (
+          <>
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Linking playlists...</span>
+          </>
+        ) : (
+          <>
+            <span className="max-w-[200px] truncate font-semibold text-green-600">
+              {spotifyPlaylist.name}
+            </span>
+            <Link2 className="h-5 w-5 text-muted-foreground" />
+            <span className="max-w-[200px] truncate font-semibold text-red-600">
+              {neteasePlaylist.name}
+            </span>
+          </>
+        )}
+      </Button>
+    </Card>
   );
 }
