@@ -257,7 +257,7 @@ export default function SyncPlaylistsModal({
             ))}
           </div>
         ) : (
-          <ScrollArea className="flex-1 pr-4">
+          <ScrollArea className="h-[calc(90vh-280px)] pr-4">
             <div className="space-y-2 py-4">
               {trackPairs.map((pair) => (
                 <div
