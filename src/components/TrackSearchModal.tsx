@@ -163,7 +163,7 @@ export default function TrackSearchModal({
           </Button>
         </div>
 
-        <ScrollArea className="flex-1 max-h-[400px]">
+        <ScrollArea className="h-[400px]">
           {isSearching ? (
             <div className="space-y-3 py-4">
               {[...Array(5)].map((_, i) => (
