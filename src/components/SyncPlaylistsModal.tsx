@@ -2,7 +2,19 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { toast } from "react-hot-toast";
+import { Check, ArrowRight, Search } from "lucide-react";
 import TrackSearchModal from "./TrackSearchModal";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { Track } from "@/types/track";
 
 interface SyncPlaylistsModalProps {
@@ -73,11 +85,7 @@ function levenshteinDistance(str1: string, str2: string): number {
       if (str1[i - 1] === str2[j - 1]) {
         dp[i][j] = dp[i - 1][j - 1];
       } else {
-        dp[i][j] = Math.min(
-          dp[i - 1][j - 1] + 1,
-          dp[i - 1][j] + 1,
-          dp[i][j - 1] + 1,
-        );
+        dp[i][j] = Math.min(dp[i - 1][j - 1] + 1, dp[i - 1][j] + 1, dp[i][j - 1] + 1);
       }
     }
   }
@@ -97,12 +105,10 @@ export default function SyncPlaylistsModal({
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchPlatform, setSearchPlatform] = useState<SearchPlatform>("NETEASE");
   const [selectedTrack, setSelectedTrack] = useState<Track | null>(null);
-  
-  // Keep local copies of playlist data
+
   const [localSpotifyTracks, setLocalSpotifyTracks] = useState(spotifyPlaylist.tracks);
   const [localNeteaseTracks, setLocalNeteaseTracks] = useState(neteasePlaylist.tracks);
 
-  // Initialize track pairs
   useEffect(() => {
     const pairs: TrackPair[] = [];
     const pairedNeteaseIds = new Set<string>();
@@ -143,17 +149,13 @@ export default function SyncPlaylistsModal({
     setIsLoading(false);
   }, [localSpotifyTracks, localNeteaseTracks]);
 
-  const handleTrackAdd = useCallback(
-    (track: Track, platform: SearchPlatform) => {
-      // Update local playlist tracks
-      if (platform === "SPOTIFY") {
-        setLocalSpotifyTracks(prev => [...prev, track]);
-      } else {
-        setLocalNeteaseTracks(prev => [...prev, track]);
-      }
-    },
-    [],
-  );
+  const handleTrackAdd = useCallback((track: Track, platform: SearchPlatform) => {
+    if (platform === "SPOTIFY") {
+      setLocalSpotifyTracks((prev) => [...prev, track]);
+    } else {
+      setLocalNeteaseTracks((prev) => [...prev, track]);
+    }
+  }, []);
 
   const handlePairTracks = useCallback(
     async (sourceTrackId: string, targetTrackId: string, platform: SearchPlatform) => {
@@ -176,7 +178,6 @@ export default function SyncPlaylistsModal({
 
         const data = await response.json();
 
-        // Update track pairs locally
         setTrackPairs((pairs) => {
           const updatedPairs = [...pairs];
           const pairIndex = pairs.findIndex(
@@ -186,9 +187,11 @@ export default function SyncPlaylistsModal({
           );
 
           if (pairIndex !== -1) {
-            const spotifyTrack = platform === "SPOTIFY" ? data.pairedTracks.spotify : data.pairedTracks.netease;
-            const neteaseTrack = platform === "NETEASE" ? data.pairedTracks.netease : data.pairedTracks.spotify;
-            
+            const spotifyTrack =
+              platform === "SPOTIFY" ? data.pairedTracks.spotify : data.pairedTracks.netease;
+            const neteaseTrack =
+              platform === "NETEASE" ? data.pairedTracks.netease : data.pairedTracks.spotify;
+
             updatedPairs[pairIndex] = {
               spotifyTrack,
               neteaseTrack,
@@ -199,9 +202,8 @@ export default function SyncPlaylistsModal({
           return updatedPairs;
         });
 
-        // Notify parent of successful update
         onPlaylistsUpdated?.();
-        
+
         toast.success("Tracks paired successfully");
       } catch (error) {
         console.error("Failed to pair tracks:", error);
@@ -211,135 +213,133 @@ export default function SyncPlaylistsModal({
     [onPlaylistsUpdated],
   );
 
-  if (isLoading) {
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[100]">
-        <div className="bg-white rounded-lg p-8">
-          <div className="w-8 h-8 border-4 border-gray-300 border-t-gray-600 rounded-full animate-spin mx-auto" />
-        </div>
-      </div>
-    );
-  }  
+  const matchedCount = trackPairs.filter((p) => p.confidence && p.confidence > 0.8).length;
+  const unmatchedCount = trackPairs.length - matchedCount;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center overflow-auto z-[100]">
-      <div className="bg-white rounded-lg p-8 m-8 max-w-6xl w-full max-h-[90vh] flex flex-col">
-        <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold">Sync Playlists</h2>
-          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full">
-            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+    <Dialog open={true} onOpenChange={onClose}>
+      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="text-2xl">Sync Playlists</DialogTitle>
+            <div className="flex items-center gap-2">
+              <Badge variant="default" className="gap-1">
+                <Check className="h-3 w-3" />
+                {matchedCount} matched
+              </Badge>
+              <Badge variant="secondary">{unmatchedCount} unmatched</Badge>
+            </div>
+          </div>
+        </DialogHeader>
+
+        <div className="flex justify-between items-center py-4 border-b">
+          <div className="flex-1 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-green-500" />
+              <h3 className="font-semibold text-green-600">Spotify</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">{spotifyPlaylist.name}</p>
+          </div>
+          <ArrowRight className="h-5 w-5 text-muted-foreground mx-4" />
+          <div className="flex-1 text-center">
+            <div className="flex items-center justify-center gap-2">
+              <div className="h-3 w-3 rounded-full bg-red-500" />
+              <h3 className="font-semibold text-red-600">Netease</h3>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">{neteasePlaylist.name}</p>
+          </div>
         </div>
 
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex-1 text-center">
-            <h3 className="font-medium text-green-600">Spotify</h3>
-            <p className="text-sm text-gray-600">{spotifyPlaylist.name}</p>
-          </div>
-          <div className="flex-1 text-center">
-            <h3 className="font-medium text-red-600">Netease</h3>
-            <p className="text-sm text-gray-600">{neteasePlaylist.name}</p>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-auto">
-          <div className="space-y-2">
-            {trackPairs.map((pair) => (
-              <div
-                key={pair.spotifyTrack?.id || pair.neteaseTrack?.id}
-                className={`flex items-center space-x-4 p-3 rounded-lg ${
-                  pair.confidence && pair.confidence > 0.8 ? "bg-green-50" : "bg-gray-50"
-                }`}
-              >
-                <div className="flex-1">
-                  {pair.spotifyTrack ? (
-                    <div>
-                      <p className="font-medium truncate">{pair.spotifyTrack.name}</p>
-                      <p className="text-sm text-gray-600 truncate">{pair.spotifyTrack.artist}</p>
-                    </div>
-                  ) : (
-                    pair.neteaseTrack && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTrack(pair.neteaseTrack!);
-                          setSearchPlatform("SPOTIFY");
-                          setShowSearchModal(true);
-                        }}
-                        className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors w-full"
-                      >
-                        Find on Spotify
-                      </button>
-                    )
-                  )}
-                </div>
-
-                <div className="flex-shrink-0 w-16 flex justify-center">
-                  {pair.confidence && pair.confidence > 0.8 ? (
-                    <svg
-                      className="w-6 h-6 text-green-600"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M5 13l4 4L19 7"
-                      />
-                    </svg>
-                  ) : (
-                    <svg
-                      className="w-6 h-6 text-gray-400"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M14 5l7 7m0 0l-7 7m7-7H3"
-                      />
-                    </svg>
-                  )}
-                </div>
-
-                <div className="flex-1">
-                  {pair.neteaseTrack ? (
-                    <div>
-                      <p className="font-medium truncate">{pair.neteaseTrack.name}</p>
-                      <p className="text-sm text-gray-600 truncate">{pair.neteaseTrack.artist}</p>
-                    </div>
-                  ) : (
-                    pair.spotifyTrack && (
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setSelectedTrack(pair.spotifyTrack!);
-                          setSearchPlatform("NETEASE");
-                          setShowSearchModal(true);
-                        }}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors w-full"
-                      >
-                        Find on Netease
-                      </button>
-                    )
-                  )}
-                </div>
-              </div>
+        {isLoading ? (
+          <div className="flex-1 space-y-3 py-4">
+            {[...Array(5)].map((_, i) => (
+              <Skeleton key={i} className="h-16 w-full" />
             ))}
           </div>
-        </div>
-      </div>
+        ) : (
+          <ScrollArea className="flex-1 pr-4">
+            <div className="space-y-2 py-4">
+              {trackPairs.map((pair) => (
+                <div
+                  key={pair.spotifyTrack?.id || pair.neteaseTrack?.id}
+                  className={cn(
+                    "flex items-center gap-4 p-4 rounded-lg border transition-colors",
+                    pair.confidence && pair.confidence > 0.8
+                      ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900"
+                      : "bg-muted/50 border-border",
+                  )}
+                >
+                  <div className="flex-1 min-w-0">
+                    {pair.spotifyTrack ? (
+                      <div>
+                        <p className="font-medium truncate">{pair.spotifyTrack.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {pair.spotifyTrack.artist}
+                        </p>
+                      </div>
+                    ) : (
+                      pair.neteaseTrack && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTrack(pair.neteaseTrack!);
+                            setSearchPlatform("SPOTIFY");
+                            setShowSearchModal(true);
+                          }}
+                        >
+                          <Search className="h-4 w-4" />
+                          Find on Spotify
+                        </Button>
+                      )
+                    )}
+                  </div>
+
+                  <div className="flex-shrink-0 w-12 flex justify-center">
+                    {pair.confidence && pair.confidence > 0.8 ? (
+                      <div className="h-8 w-8 rounded-full bg-green-100 dark:bg-green-900 flex items-center justify-center">
+                        <Check className="h-5 w-5 text-green-600 dark:text-green-400" />
+                      </div>
+                    ) : (
+                      <ArrowRight className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    {pair.neteaseTrack ? (
+                      <div>
+                        <p className="font-medium truncate">{pair.neteaseTrack.name}</p>
+                        <p className="text-sm text-muted-foreground truncate">
+                          {pair.neteaseTrack.artist}
+                        </p>
+                      </div>
+                    ) : (
+                      pair.spotifyTrack && (
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="w-full gap-2 bg-red-600 hover:bg-red-700"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedTrack(pair.spotifyTrack!);
+                            setSearchPlatform("NETEASE");
+                            setShowSearchModal(true);
+                          }}
+                        >
+                          <Search className="h-4 w-4" />
+                          Find on Netease
+                        </Button>
+                      )
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+        )}
+      </DialogContent>
 
       {showSearchModal && selectedTrack && (
         <TrackSearchModal
@@ -348,13 +348,9 @@ export default function SyncPlaylistsModal({
           sourceTrack={selectedTrack}
           playlistId={searchPlatform === "SPOTIFY" ? spotifyPlaylist.id : neteasePlaylist.id}
           onSelect={async (track: Track) => {
-            // First update local state
             handleTrackAdd(track, searchPlatform);
-            
-            // Then pair the tracks
             await handlePairTracks(selectedTrack.id, track.id, searchPlatform);
 
-            // Update track pairs with new track
             setTrackPairs((pairs) => {
               const updatedPairs = [...pairs];
               const pairIndex = pairs.findIndex(
@@ -382,9 +378,8 @@ export default function SyncPlaylistsModal({
               return updatedPairs;
             });
 
-            // If playlists were successfully updated, notify parent
             onPlaylistsUpdated?.();
-            
+
             setShowSearchModal(false);
             setSelectedTrack(null);
           }}
@@ -394,6 +389,6 @@ export default function SyncPlaylistsModal({
           }}
         />
       )}
-    </div>
+    </Dialog>
   );
 }
