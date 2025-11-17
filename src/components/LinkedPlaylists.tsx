@@ -1,15 +1,15 @@
 "use client";
 
 import { useState, useEffect, forwardRef, useImperativeHandle, useCallback } from "react";
-import { ArrowRight, RefreshCw, Link2Off, AlertCircle, Loader2 } from "lucide-react";
+import { ArrowRight, RefreshCw, Link2Off, AlertCircle, Loader2, Trash2 } from "lucide-react";
 import SyncPlaylistsModal from "./SyncPlaylistsModal";
 import { Card, CardContent, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Track } from "@/types/track";
-import { PlaylistPair } from "@/types/playlist";
+import type { Track } from "@/types/track";
+import type { PlaylistPair } from "@/types/playlist";
 
 interface PlaylistWithTracks {
   id: string;
@@ -23,7 +23,6 @@ interface LinkedPlaylistsProps {
 
 export interface LinkedPlaylistsRef {
   loadLinkedPlaylists: () => Promise<void>;
-  updatePairedTracks: (spotifyTrack: Track | null, neteaseTrack: Track | null) => void;
 }
 
 const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ userId }, ref) => {
@@ -33,7 +32,9 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncSpotifyPlaylist, setSyncSpotifyPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [syncNeteasePlaylist, setSyncNeteasePlaylist] = useState<PlaylistWithTracks | null>(null);
+  const [currentPairingId, setCurrentPairingId] = useState<string | null>(null);
   const [loadingPairId, setLoadingPairId] = useState<string | null>(null);
+  const [deletingPairId, setDeletingPairId] = useState<string | null>(null);
 
   const loadLinkedPlaylists = useCallback(async () => {
     setIsLoading(true);
@@ -59,39 +60,15 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
 
   useImperativeHandle(ref, () => ({
     loadLinkedPlaylists,
-    updatePairedTracks: (spotifyTrack: Track | null, neteaseTrack: Track | null) => {
-      if (!spotifyTrack && !neteaseTrack) return;
-
-      setLinkedPlaylists((playlists) =>
-        playlists.map((pair) => {
-          const updated = { ...pair };
-
-          if (spotifyTrack && syncSpotifyPlaylist && pair.spotify.id === syncSpotifyPlaylist.id) {
-            updated.spotify = {
-              ...updated.spotify,
-              trackCount: updated.spotify.trackCount + 1,
-            };
-          }
-          if (neteaseTrack && syncNeteasePlaylist && pair.netease.id === syncNeteasePlaylist.id) {
-            updated.netease = {
-              ...updated.netease,
-              trackCount: updated.netease.trackCount + 1,
-            };
-          }
-
-          return updated;
-        }),
-      );
-    },
   }));
 
-  const handleStartSync = async (spotifyId: string, neteaseId: string) => {
-    const pairId = `${spotifyId}-${neteaseId}`;
-    setLoadingPairId(pairId);
+  const handleStartSync = async (pair: PlaylistPair) => {
+    setLoadingPairId(pair.pairingId);
     try {
+      // Fetch fresh tracks from both platforms in parallel
       const [spotifyResponse, neteaseResponse] = await Promise.all([
-        fetch(`/api/playlists/spotify/${spotifyId}/tracks`),
-        fetch(`/api/playlists/netease/${neteaseId}/tracks`),
+        fetch(`/api/playlists/spotify/${pair.spotify.id}/tracks?userId=${userId}`),
+        fetch(`/api/playlists/netease/${pair.netease.id}/tracks?userId=${userId}`),
       ]);
 
       if (!spotifyResponse.ok || !neteaseResponse.ok) {
@@ -103,26 +80,60 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
         neteaseResponse.json(),
       ]);
 
-      const spotifyPlaylist = linkedPlaylists.find((p) => p.spotify.id === spotifyId);
-      const neteasePlaylist = linkedPlaylists.find((p) => p.netease.id === neteaseId);
-
       setSyncSpotifyPlaylist({
-        id: spotifyId,
-        name: spotifyPlaylist?.spotify.name || "",
+        id: pair.spotify.id,
+        name: pair.spotify.name,
         tracks: spotifyData.tracks,
       });
       setSyncNeteasePlaylist({
-        id: neteaseId,
-        name: neteasePlaylist?.netease.name || "",
+        id: String(pair.netease.id),
+        name: pair.netease.name,
         tracks: neteaseData.tracks,
       });
+      setCurrentPairingId(pair.pairingId);
       setShowSyncModal(true);
     } catch (error) {
       console.error("Error loading tracks:", error);
-      alert("Failed to load tracks");
+      alert("Failed to load tracks. Please try again.");
     } finally {
       setLoadingPairId(null);
     }
+  };
+
+  const handleUnlink = async (pairingId: string) => {
+    if (!confirm("Are you sure you want to unlink these playlists?")) {
+      return;
+    }
+
+    setDeletingPairId(pairingId);
+    try {
+      const response = await fetch("/api/playlists/link", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pairingId }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to unlink playlists");
+      }
+
+      // Remove from local state
+      setLinkedPlaylists((prev) => prev.filter((p) => p.pairingId !== pairingId));
+    } catch (error) {
+      console.error("Error unlinking playlists:", error);
+      alert("Failed to unlink playlists. Please try again.");
+    } finally {
+      setDeletingPairId(null);
+    }
+  };
+
+  const handleSyncModalClose = () => {
+    setShowSyncModal(false);
+    setSyncSpotifyPlaylist(null);
+    setSyncNeteasePlaylist(null);
+    setCurrentPairingId(null);
+    // Reload to get fresh track counts from APIs
+    loadLinkedPlaylists();
   };
 
   if (isLoading) {
@@ -173,11 +184,11 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
 
       <div className="grid gap-4">
         {linkedPlaylists.map((pair) => {
-          const pairId = `${pair.spotify.id}-${pair.netease.id}`;
-          const isLoadingThisPair = loadingPairId === pairId;
+          const isLoadingThisPair = loadingPairId === pair.pairingId;
+          const isDeletingThisPair = deletingPairId === pair.pairingId;
 
           return (
-            <Card key={pairId} className="overflow-hidden">
+            <Card key={pair.pairingId} className="overflow-hidden">
               <CardContent className="p-6">
                 <div className="flex items-center justify-between gap-4">
                   <div className="flex flex-1 items-center gap-4">
@@ -187,7 +198,7 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
                         <p className="font-semibold text-green-600 truncate">{pair.spotify.name}</p>
                       </div>
                       <p className="text-sm text-muted-foreground mt-1">
-                        {pair.spotify.trackCount} tracks
+                        {pair.spotify.tracks.total} tracks
                       </p>
                     </div>
 
@@ -206,23 +217,38 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
 
                   <Separator orientation="vertical" className="h-12" />
 
-                  <Button
-                    onClick={() => handleStartSync(pair.spotify.id, pair.netease.id)}
-                    disabled={isLoadingThisPair}
-                    className="gap-2"
-                  >
-                    {isLoadingThisPair ? (
-                      <>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      onClick={() => handleStartSync(pair)}
+                      disabled={isLoadingThisPair || isDeletingThisPair}
+                      className="gap-2"
+                    >
+                      {isLoadingThisPair ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          Loading...
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          Sync
+                        </>
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => handleUnlink(pair.pairingId)}
+                      disabled={isLoadingThisPair || isDeletingThisPair}
+                      className="text-destructive hover:text-destructive"
+                    >
+                      {isDeletingThisPair ? (
                         <Loader2 className="h-4 w-4 animate-spin" />
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <RefreshCw className="h-4 w-4" />
-                        Sync
-                      </>
-                    )}
-                  </Button>
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </Button>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -230,16 +256,13 @@ const LinkedPlaylists = forwardRef<LinkedPlaylistsRef, LinkedPlaylistsProps>(({ 
         })}
       </div>
 
-      {showSyncModal && syncSpotifyPlaylist && syncNeteasePlaylist && (
+      {showSyncModal && syncSpotifyPlaylist && syncNeteasePlaylist && currentPairingId && (
         <SyncPlaylistsModal
           userId={userId}
           spotifyPlaylist={syncSpotifyPlaylist}
           neteasePlaylist={syncNeteasePlaylist}
-          onClose={() => {
-            setShowSyncModal(false);
-            setSyncSpotifyPlaylist(null);
-            setSyncNeteasePlaylist(null);
-          }}
+          pairingId={currentPairingId}
+          onClose={handleSyncModalClose}
         />
       )}
     </div>

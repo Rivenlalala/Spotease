@@ -17,7 +17,11 @@ export async function GET(request: NextRequest) {
     }
 
     // Exchange code for tokens
-    const { access_token: accessToken, refresh_token: refreshToken, expires_in: expiresIn } = await getSpotifyTokens(code);
+    const {
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_in: expiresIn,
+    } = await getSpotifyTokens(code);
 
     // Get user info from Spotify
     const spotifyUser = await getSpotifyUser(accessToken);
@@ -50,7 +54,9 @@ export async function GET(request: NextRequest) {
     });
 
     // Redirect to dashboard with success and set session cookie
-    const response = NextResponse.redirect(`${process.env.NEXT_PUBLIC_APP_URL}/dashboard?userId=${user.id}`);
+    const response = NextResponse.redirect(
+      `${process.env.NEXT_PUBLIC_APP_URL}/dashboard?userId=${user.id}`,
+    );
 
     // Set session cookie (expires in 30 days)
     response.cookies.set("spotease_user_id", user.id, {

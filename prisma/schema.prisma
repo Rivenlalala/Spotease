@@ -8,83 +8,51 @@ datasource db {
 }
 
 model User {
-  id                String     @id @default(cuid())
-  email             String     @unique
-  name              String?
-  image             String?
+  id                  String            @id @default(cuid())
+  email               String            @unique
+  name                String?
+  image               String?
   // Spotify credentials
-  spotifyId         String?    @unique
-  spotifyAccessToken  String?  @db.Text
-  spotifyRefreshToken String?  @db.Text
+  spotifyId           String?           @unique
+  spotifyAccessToken  String?           @db.Text
+  spotifyRefreshToken String?           @db.Text
   spotifyExpiresAt    DateTime?
   // Netease credentials
-  neteaseId         String?    @unique
-  neteaseCookie     String?    @db.Text
-  neteaseName       String?
-  neteaseAvatar     String?
+  neteaseId           String?           @unique
+  neteaseCookie       String?           @db.Text
+  neteaseName         String?
+  neteaseAvatar       String?
   // Relations
-  playlists         Playlist[]
+  playlistPairings    PlaylistPairing[]
   // Timestamps
-  createdAt         DateTime   @default(now())
-  updatedAt         DateTime   @updatedAt
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
 
-  // Ensure user has valid credentials for at least one service
   @@index([spotifyId, neteaseId])
 }
 
-/// @TypeInput({ create: true, update: true })
-model Playlist {
-  id         String          @id @default(cuid())
-  name       String
-  /// @TypeInput({ create: true, update: true })
-  cover      String?         @db.Text
-  spotifyId  String?         @unique
-  neteaseId  String?         @unique
-  platform   Platform
-  userId     String
-  user       User            @relation(fields: [userId], references: [id])
-  tracks     PlaylistTrack[]
-  pairedWith Playlist?       @relation("PlaylistPair", fields: [pairedId], references: [id])
-  pairedId   String?         @unique
-  paired     Playlist?       @relation("PlaylistPair")
-  syncEnabled Boolean        @default(true)
-  lastSynced DateTime?
-  trackCount Int
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
+// Simplified: Only store the pairing relationship, not playlist metadata
+// Playlist metadata is fetched fresh from Spotify/NetEase APIs
+model PlaylistPairing {
+  id                String   @id @default(cuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  spotifyPlaylistId String
+  neteasePlaylistId String
+  createdAt         DateTime @default(now())
+
+  // Each Spotify playlist can only be paired once per user
+  // Each NetEase playlist can only be paired once per user
+  @@unique([userId, spotifyPlaylistId])
+  @@unique([userId, neteasePlaylistId])
+  @@index([userId])
 }
 
-model Track {
-  id         String          @id @default(cuid())
-  name       String
-  artist     String
-  album      String
-  spotifyId  String?         @unique
-  neteaseId  String?         @unique
-  playlists  PlaylistTrack[]
-  pairedWith Track?          @relation("TrackPair", fields: [pairedId], references: [id])
-  pairedId   String?         @unique
-  paired     Track?          @relation("TrackPair")
-  createdAt  DateTime        @default(now())
-  updatedAt  DateTime        @updatedAt
-}
-
-model PlaylistTrack {
-  id         String    @id @default(cuid())
-  playlist   Playlist  @relation(fields: [playlistId], references: [id])
-  playlistId String
-  track      Track     @relation(fields: [trackId], references: [id])
-  trackId    String
-  position   Int
-  lastSynced DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-
-  @@unique([playlistId, trackId])
-  @@index([playlistId, position])
-}
-
-enum Platform {
-  SPOTIFY
-  NETEASE
+// Simplified: Only store track ID mappings between platforms
+// Track metadata is fetched fresh from Spotify/NetEase APIs
+model TrackPairing {
+  id             String   @id @default(cuid())
+  spotifyTrackId String   @unique
+  neteaseTrackId String   @unique
+  createdAt      DateTime @default(now())
 }

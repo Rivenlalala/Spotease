@@ -1,97 +1,109 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { apiCache, cacheKeys } from "@/lib/cache";
 
 export async function POST(request: NextRequest): Promise<Response> {
   try {
-    const { spotifyTrackId, neteaseTrackId, sourceTrackId, targetTrackId, platform } = await request.json();
+    const { spotifyTrackId, neteaseTrackId } = await request.json();
 
-    // Support both direct pairing and platform-based pairing
-    let finalSpotifyId: string;
-    let finalNeteaseId: string;
-
-    if (spotifyTrackId && neteaseTrackId) {
-      finalSpotifyId = spotifyTrackId;
-      finalNeteaseId = neteaseTrackId;
-    } else if (sourceTrackId && targetTrackId && platform) {
-      // Determine which ID is for which platform
-      if (platform === "SPOTIFY") {
-        finalSpotifyId = targetTrackId;
-        finalNeteaseId = sourceTrackId;
-      } else {
-        finalSpotifyId = sourceTrackId;
-        finalNeteaseId = targetTrackId;
-      }
-    } else {
+    if (!spotifyTrackId || !neteaseTrackId) {
       return Response.json(
-        { error: "Invalid request. Must provide either spotifyTrackId and neteaseTrackId, or sourceTrackId, targetTrackId, and platform" },
+        { error: "Both spotifyTrackId and neteaseTrackId are required" },
         { status: 400 },
       );
     }
 
-    // Find both tracks
-    const [spotifyTrack, neteaseTrack] = await Promise.all([
-      prisma.track.findUnique({
-        where: { spotifyId: finalSpotifyId },
-        include: {
-          playlists: {
-            select: {
-              playlistId: true,
-            },
-          },
-        },
-      }),
-      prisma.track.findUnique({
-        where: { neteaseId: finalNeteaseId },
-        include: {
-          playlists: {
-            select: {
-              playlistId: true,
-            },
-          },
-        },
-      }),
-    ]);
+    // Create the track pairing - just store the ID mapping
+    const pairing = await prisma.trackPairing.create({
+      data: {
+        spotifyTrackId,
+        neteaseTrackId,
+      },
+    });
 
-    if (!spotifyTrack || !neteaseTrack) {
-      return Response.json({ error: "One or both tracks not found" }, { status: 404 });
-    }
-
-    // Find any existing pairs
-    if (spotifyTrack.pairedId || neteaseTrack.pairedId) {
-      return Response.json({ error: "One or both tracks are already paired" }, { status: 400 });
-    }
-
-    // Update both tracks to pair them
-    await prisma.$transaction([
-      prisma.track.update({
-        where: { id: spotifyTrack.id },
-        data: { pairedId: neteaseTrack.id },
-      }),
-      prisma.track.update({
-        where: { id: neteaseTrack.id },
-        data: { pairedId: spotifyTrack.id },
-      }),
-    ]);
+    // Invalidate track pairings cache so next fetch gets fresh data
+    apiCache.invalidate(cacheKeys.trackPairings());
 
     return Response.json({
       success: true,
-      pairedTracks: {
-        spotify: {
-          id: spotifyTrack.spotifyId,
-          name: spotifyTrack.name,
-          artist: spotifyTrack.artist,
-          album: spotifyTrack.album,
-        },
-        netease: {
-          id: neteaseTrack.neteaseId,
-          name: neteaseTrack.name,
-          artist: neteaseTrack.artist,
-          album: neteaseTrack.album,
-        },
+      pairing: {
+        id: pairing.id,
+        spotifyTrackId: pairing.spotifyTrackId,
+        neteaseTrackId: pairing.neteaseTrackId,
       },
     });
   } catch (error) {
+    // Handle unique constraint violations (track already paired)
+    if (error instanceof Error && error.message.includes("Unique constraint")) {
+      return Response.json(
+        { error: "One or both tracks are already paired" },
+        { status: 400 },
+      );
+    }
+
     console.error("Error pairing tracks:", error);
     return Response.json({ error: "Failed to pair tracks" }, { status: 500 });
+  }
+}
+
+// Get all track pairings
+export async function GET(): Promise<Response> {
+  try {
+    // Check cache first
+    const cached = apiCache.get<Array<{ spotifyTrackId: string; neteaseTrackId: string }>>(
+      cacheKeys.trackPairings(),
+    );
+
+    if (cached) {
+      return Response.json({ pairings: cached, cached: true });
+    }
+
+    const pairings = await prisma.trackPairing.findMany({
+      select: {
+        spotifyTrackId: true,
+        neteaseTrackId: true,
+      },
+    });
+
+    // Cache for 60 seconds (longer since pairings change less frequently)
+    apiCache.set(cacheKeys.trackPairings(), pairings, 60);
+
+    return Response.json({ pairings });
+  } catch (error) {
+    console.error("Error fetching track pairings:", error);
+    return Response.json({ error: "Failed to fetch track pairings" }, { status: 500 });
+  }
+}
+
+// Delete a track pairing
+export async function DELETE(request: NextRequest): Promise<Response> {
+  try {
+    const { spotifyTrackId, neteaseTrackId } = await request.json();
+
+    if (!spotifyTrackId && !neteaseTrackId) {
+      return Response.json(
+        { error: "Either spotifyTrackId or neteaseTrackId is required" },
+        { status: 400 },
+      );
+    }
+
+    // Delete by either ID
+    if (spotifyTrackId) {
+      await prisma.trackPairing.delete({
+        where: { spotifyTrackId },
+      });
+    } else {
+      await prisma.trackPairing.delete({
+        where: { neteaseTrackId },
+      });
+    }
+
+    // Invalidate cache
+    apiCache.invalidate(cacheKeys.trackPairings());
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("Error deleting track pairing:", error);
+    return Response.json({ error: "Failed to delete track pairing" }, { status: 500 });
   }
 }
