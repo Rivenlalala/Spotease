@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useState, useRef, Suspense, useCallback } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { Platform } from "@prisma/client";
 import { toast } from "react-hot-toast";
-import { CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, AlertCircle, Loader2, LogOut } from "lucide-react";
 import { User } from "@/types/user";
 import NeteaseQRLoginModal from "@/components/NeteaseQRLoginModal";
 import PlaylistGrid from "@/components/PlaylistGrid";
@@ -27,6 +27,7 @@ interface PlaylistWithTracks {
 
 function DashboardContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const userId = searchParams.get("userId");
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,6 +37,7 @@ function DashboardContent() {
   const [showSyncModal, setShowSyncModal] = useState(false);
   const [syncSpotifyPlaylist, setSyncSpotifyPlaylist] = useState<PlaylistWithTracks | null>(null);
   const [syncNeteasePlaylist, setSyncNeteasePlaylist] = useState<PlaylistWithTracks | null>(null);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   const loadUser = useCallback(async () => {
     if (!userId) return;
@@ -55,6 +57,27 @@ function DashboardContent() {
   useEffect(() => {
     loadUser();
   }, [loadUser]);
+
+  const handleLogout = useCallback(async () => {
+    setLoggingOut(true);
+    try {
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+      });
+
+      if (response.ok) {
+        toast.success("Logged out successfully");
+        router.push("/");
+      } else {
+        throw new Error("Logout failed");
+      }
+    } catch (error) {
+      console.error("Logout error:", error);
+      toast.error("Failed to logout");
+    } finally {
+      setLoggingOut(false);
+    }
+  }, [router]);
 
   const linkedPlaylistsRef = useRef<LinkedPlaylistsRef>(null);
 
@@ -167,9 +190,25 @@ function DashboardContent() {
                 <h1 className="text-2xl font-bold">{user.name ?? "Anonymous"}</h1>
                 {user.email && <p className="text-muted-foreground">{user.email}</p>}
               </div>
-              <Badge variant="secondary" className="text-sm">
-                Dashboard
-              </Badge>
+              <div className="flex items-center gap-2">
+                <Badge variant="secondary" className="text-sm">
+                  Dashboard
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleLogout}
+                  disabled={loggingOut}
+                  className="gap-2"
+                >
+                  {loggingOut ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <LogOut className="h-4 w-4" />
+                  )}
+                  Logout
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

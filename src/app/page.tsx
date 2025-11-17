@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, Suspense } from "react";
-import { useSearchParams } from "next/navigation";
-import { Music2, AlertCircle, CheckCircle2, ArrowRight } from "lucide-react";
+import { useState, Suspense, useEffect } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
+import { Music2, AlertCircle, CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import NeteaseQRLoginModal from "@/components/NeteaseQRLoginModal";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,15 +11,51 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 function HomeContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const userId = searchParams.get("userId");
   const error = searchParams.get("error");
   const [showNeteaseModal, setShowNeteaseModal] = useState(false);
+  const [checkingSession, setCheckingSession] = useState(true);
+
+  // Check for existing session on mount
+  useEffect(() => {
+    async function checkSession() {
+      try {
+        const response = await fetch("/api/auth/session");
+        const data = await response.json();
+
+        if (data.user) {
+          // User is already logged in, redirect to dashboard
+          router.push(`/dashboard?userId=${data.user.id}`);
+          return;
+        }
+      } catch (error) {
+        console.error("Failed to check session:", error);
+      } finally {
+        setCheckingSession(false);
+      }
+    }
+
+    checkSession();
+  }, [router]);
 
   const errorMessages: Record<string, string> = {
     spotify_auth_denied: "Spotify authentication was denied.",
     spotify_auth_failed: "Failed to authenticate with Spotify.",
     no_code: "No authorization code received from Spotify.",
   };
+
+  // Show loading while checking session
+  if (checkingSession) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center p-6">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <p className="text-lg text-muted-foreground">Checking session...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex min-h-screen flex-col items-center justify-center p-6 bg-gradient-to-b from-background to-muted/30">
