@@ -5,12 +5,16 @@ import { apiCache, cacheKeys } from "@/lib/cache";
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, spotifyPlaylistId, neteasePlaylistId } = body;
+    const { userId, spotifyPlaylistId, neteasePlaylistId } = body as {
+      userId: string;
+      spotifyPlaylistId: string;
+      neteasePlaylistId: string;
+    };
 
     if (!userId || !spotifyPlaylistId || !neteasePlaylistId) {
       return Response.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -45,13 +49,13 @@ export async function POST(request: NextRequest) {
     ) {
       return Response.json(
         { error: "One of these playlists is already linked" },
-        { status: 409 }
+        { status: 409 },
       );
     }
 
     return Response.json(
       { error: "Failed to link playlists" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -65,7 +69,7 @@ export async function DELETE(request: NextRequest) {
     if (!pairingId || !userId) {
       return Response.json(
         { error: "Missing pairingId or userId" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -89,7 +93,7 @@ export async function DELETE(request: NextRequest) {
     console.error("Error unlinking playlists:", error);
     return Response.json(
       { error: "Failed to unlink playlists" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
