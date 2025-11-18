@@ -1,18 +1,28 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { getUserPlaylists } from "@/lib/netease";
-import { imageUrlToBase64 } from "@/lib/image";
-import { Platform } from "@prisma/client";
+import { apiCache, cacheKeys } from "@/lib/cache";
 import type { NeteasePlaylist } from "@/types/netease";
+import { neteasePlaylistToGeneric } from "@/types/playlist";
 
 export async function GET(request: NextRequest): Promise<Response> {
   try {
     const searchParams = request.nextUrl.searchParams;
     const userId = searchParams.get("userId");
-    const refresh = searchParams.get("refresh") === "true";
 
     if (!userId) {
       return Response.json({ error: "User ID is required" }, { status: 400 });
+    }
+
+    // Check cache first
+    const cacheKey = cacheKeys.neteasePlaylists(userId);
+    const cached = apiCache.get<NeteasePlaylist[]>(cacheKey);
+
+    if (cached) {
+      return Response.json({
+        playlists: cached.map(neteasePlaylistToGeneric),
+        cached: true,
+      });
     }
 
     const user = await prisma.user.findUnique({
@@ -27,101 +37,17 @@ export async function GET(request: NextRequest): Promise<Response> {
       return Response.json({ error: "User not connected to Netease" }, { status: 400 });
     }
 
-    // First try to get cached playlists
-    const cachedPlaylists = await prisma.playlist.findMany({
-      where: {
-        userId,
-        platform: Platform.NETEASE,
-        neteaseId: { not: null },
-      },
-      select: {
-        neteaseId: true,
-        name: true,
-        cover: true,
-        trackCount: true,
-      },
-      orderBy: { updatedAt: "desc" },
-    });
-
-    // Return cached data if available and refresh not requested
-    if (!refresh && cachedPlaylists.length > 0) {
-      return Response.json({
-        playlists: cachedPlaylists.map((playlist) => ({
-          id: playlist.neteaseId!,
-          name: playlist.name,
-          platform: Platform.NETEASE,
-          trackCount: playlist.trackCount,
-          cover: playlist.cover,
-        })),
-        cached: true,
-      });
-    }
-
-    // Fetch fresh playlists
+    // Fetch fresh playlists from NetEase API
     const { playlist } = await getUserPlaylists(user.neteaseCookie, user.neteaseId);
-    const userPlaylists = playlist.filter(
-      (p: NeteasePlaylist) => p.userId.toString() === user.neteaseId,
-    );
 
-    // Update playlist cache one by one to avoid overwhelming the server
-    for (const playlist of userPlaylists) {
-      try {
-        let coverImage = null;
-        if (playlist.coverImgUrl) {
-          try {
-            coverImage = await imageUrlToBase64(playlist.coverImgUrl);
-          } catch (error) {
-            console.error("Failed to convert cover image:", error);
-          }
-        }
+    // Filter to only user's own playlists
+    const userPlaylists = playlist.filter((p) => p.userId.toString() === user.neteaseId);
 
-        await prisma.playlist.upsert({
-          where: {
-            neteaseId: playlist.id.toString(),
-          },
-          create: {
-            name: playlist.name,
-            neteaseId: playlist.id.toString(),
-            platform: Platform.NETEASE,
-            userId,
-            cover: coverImage,
-            trackCount: playlist.trackCount,
-          },
-          update: {
-            name: playlist.name,
-            cover: coverImage,
-            trackCount: playlist.trackCount,
-          },
-        });
-      } catch (error) {
-        console.error(`Failed to update playlist ${playlist.id}:`, error);
-        // Continue with other playlists even if one fails
-      }
-    }
-
-    // Get final state from database
-    const updatedPlaylists = await prisma.playlist.findMany({
-      where: {
-        userId,
-        platform: Platform.NETEASE,
-        neteaseId: { in: userPlaylists.map((p) => p.id.toString()) },
-      },
-      select: {
-        neteaseId: true,
-        name: true,
-        cover: true,
-        trackCount: true,
-      },
-    });
+    // Cache the API response
+    apiCache.set(cacheKey, userPlaylists);
 
     return Response.json({
-      playlists: updatedPlaylists.map((playlist) => ({
-        id: playlist.neteaseId!,
-        name: playlist.name,
-        platform: Platform.NETEASE,
-        trackCount: playlist.trackCount,
-        cover: playlist.cover,
-      })),
+      playlists: userPlaylists.map(neteasePlaylistToGeneric),
     });
   } catch (error) {
     console.error("Error fetching Netease playlists:", error);

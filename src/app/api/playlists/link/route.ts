@@ -1,66 +1,99 @@
 import { NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
+import { apiCache, cacheKeys } from "@/lib/cache";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { userId, spotifyId, neteaseId } = body;
+    const { userId, spotifyPlaylistId, neteasePlaylistId } = body as {
+      userId: string;
+      spotifyPlaylistId: string;
+      neteasePlaylistId: string;
+    };
 
-    // Get playlist details first
-    const [spotifyPlaylist, neteasePlaylist] = await Promise.all([
-      prisma.playlist.findUnique({ where: { spotifyId } }),
-      prisma.playlist.findUnique({ where: { neteaseId } }),
-    ]);
-
-    if (!userId || !spotifyId || !neteaseId || !spotifyPlaylist || !neteasePlaylist) {
-      return Response.json({ error: "Missing required parameters" }, { status: 400 });
+    if (!userId || !spotifyPlaylistId || !neteasePlaylistId) {
+      return Response.json(
+        { error: "Missing required fields" },
+        { status: 400 },
+      );
     }
 
-    // Create playlist pair by updating both playlists
-    const spotifyDbPlaylist = await prisma.playlist.update({
-      where: { id: spotifyPlaylist.id },
+    // Create the playlist pairing
+    const pairing = await prisma.playlistPairing.create({
       data: {
-        pairedId: neteasePlaylist.id,
-        lastSynced: new Date(),
+        userId,
+        spotifyPlaylistId,
+        neteasePlaylistId,
       },
     });
 
-    // Update netease playlist and get the updated pair
-    await prisma.playlist.update({
-      where: { id: neteasePlaylist.id },
-      data: {
-        pairedId: spotifyPlaylist.id,
-        lastSynced: new Date(),
-      },
-    });
-
-    const playlistPair = await prisma.playlist.findUnique({
-      where: { id: spotifyDbPlaylist.id },
-      include: {
-        pairedWith: true,
-      },
-    });
-
-    if (!playlistPair || !playlistPair.pairedWith) {
-      throw new Error("Failed to create playlist pair");
-    }
+    // Invalidate cache for linked playlists
+    apiCache.invalidate(cacheKeys.linkedPlaylists(userId));
 
     return Response.json({
       success: true,
-      pair: {
-        spotify: {
-          id: playlistPair.spotifyId,
-          name: playlistPair.name,
-        },
-        netease: {
-          id: playlistPair.pairedWith.neteaseId,
-          name: playlistPair.pairedWith.name,
-        },
-        lastSynced: playlistPair.lastSynced,
+      pairing: {
+        id: pairing.id,
+        spotifyPlaylistId: pairing.spotifyPlaylistId,
+        neteasePlaylistId: pairing.neteasePlaylistId,
+        createdAt: pairing.createdAt.toISOString(),
       },
     });
   } catch (error) {
     console.error("Error linking playlists:", error);
-    return Response.json({ error: "Failed to link playlists" }, { status: 500 });
+
+    // Handle unique constraint violation
+    if (
+      error instanceof Error &&
+      error.message.includes("Unique constraint")
+    ) {
+      return Response.json(
+        { error: "One of these playlists is already linked" },
+        { status: 409 },
+      );
+    }
+
+    return Response.json(
+      { error: "Failed to link playlists" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const pairingId = searchParams.get("pairingId");
+    const userId = searchParams.get("userId");
+
+    if (!pairingId || !userId) {
+      return Response.json(
+        { error: "Missing pairingId or userId" },
+        { status: 400 },
+      );
+    }
+
+    // Delete the pairing (ensures user owns it)
+    const deleted = await prisma.playlistPairing.deleteMany({
+      where: {
+        id: pairingId,
+        userId: userId,
+      },
+    });
+
+    if (deleted.count === 0) {
+      return Response.json({ error: "Pairing not found" }, { status: 404 });
+    }
+
+    // Invalidate cache
+    apiCache.invalidate(cacheKeys.linkedPlaylists(userId));
+
+    return Response.json({ success: true });
+  } catch (error) {
+    console.error("Error unlinking playlists:", error);
+    return Response.json(
+      { error: "Failed to unlink playlists" },
+      { status: 500 },
+    );
   }
 }

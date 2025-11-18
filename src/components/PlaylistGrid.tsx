@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { Platform } from "@prisma/client";
 import { RefreshCw, Music2, AlertCircle } from "lucide-react";
 import PlaylistItem from "./PlaylistItem";
 import { Button } from "@/components/ui/button";
@@ -10,6 +9,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { type Playlist } from "@/types/playlist";
+
+type Platform = "SPOTIFY" | "NETEASE";
 
 interface PlaylistGridProps {
   userId: string;
@@ -29,29 +30,24 @@ export default function PlaylistGrid({
   const [error, setError] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadPlaylists = useCallback(
-    async (refresh = false) => {
-      try {
-        setLoading(true);
-        setError(null);
-        const response = await fetch(
-          `/api/playlists/${platform.toLowerCase()}?userId=${userId}${refresh ? "&refresh=true" : ""}`,
-        );
-        if (!response.ok) {
-          throw new Error("Failed to load playlists");
-        }
-        const data = await response.json();
-        setPlaylists(data.playlists);
-      } catch (error) {
-        console.error("Error loading playlists:", error);
-        setError("Failed to load playlists");
-      } finally {
-        setLoading(false);
-        setIsRefreshing(false);
+  const loadPlaylists = useCallback(async () => {
+    try {
+      setLoading(true);
+      setError(null);
+      const response = await fetch(`/api/playlists/${platform.toLowerCase()}?userId=${userId}`);
+      if (!response.ok) {
+        throw new Error("Failed to load playlists");
       }
-    },
-    [platform, userId],
-  );
+      const data = await response.json();
+      setPlaylists(data.playlists);
+    } catch (error) {
+      console.error("Error loading playlists:", error);
+      setError("Failed to load playlists");
+    } finally {
+      setLoading(false);
+      setIsRefreshing(false);
+    }
+  }, [platform, userId]);
 
   useEffect(() => {
     if (userId) {
@@ -61,16 +57,16 @@ export default function PlaylistGrid({
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    await loadPlaylists(true);
+    await loadPlaylists();
   };
 
   const platformConfig = {
-    [Platform.SPOTIFY]: {
+    SPOTIFY: {
       name: "Spotify",
       color: "bg-green-500",
       textColor: "text-green-600",
     },
-    [Platform.NETEASE]: {
+    NETEASE: {
       name: "Netease",
       color: "bg-red-500",
       textColor: "text-red-600",

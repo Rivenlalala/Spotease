@@ -1,7 +1,9 @@
 import { type NextRequest } from "next/server";
 import { prisma } from "@/lib/db";
 import { refreshSpotifyToken, addTracksToPlaylist } from "@/lib/spotify";
+import { apiCache, cacheKeys } from "@/lib/cache";
 import type { SpotifyTrack, SpotifyTrackItem } from "@/types/spotify";
+import { spotifyTrackToGeneric } from "@/types/track";
 
 async function fetchPlaylistTracks(
   playlistId: string,
@@ -11,7 +13,7 @@ async function fetchPlaylistTracks(
   let url =
     playlistId === "liked-songs"
       ? "https://api.spotify.com/v1/me/tracks?limit=50"
-      : `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+      : `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50`;
 
   while (url) {
     const response = await fetch(url, {
@@ -21,17 +23,14 @@ async function fetchPlaylistTracks(
     });
 
     if (!response.ok) {
-      throw new Error("Failed to fetch tracks");
+      throw new Error("Failed to fetch tracks from Spotify");
     }
 
     const data = await response.json();
-    const items = data.items.map((item: SpotifyTrackItem) => ({
-      id: item.track.id,
-      name: item.track.name,
-      artists: item.track.artists,
-      album: item.track.album,
-    }));
-    tracks.push(...items.filter(Boolean));
+    const items = data.items
+      .filter((item: SpotifyTrackItem) => item.track && item.track.id)
+      .map((item: SpotifyTrackItem) => item.track);
+    tracks.push(...items);
     url = data.next;
   }
 
@@ -44,49 +43,30 @@ export async function GET(
 ): Promise<Response> {
   try {
     const searchParams = request.nextUrl.searchParams;
-    const refresh = searchParams.get("refresh") === "true";
+    const userId = searchParams.get("userId");
     const { playlistId } = await context.params;
 
-    // First try to get cached tracks
-    const playlist = await prisma.playlist.findUnique({
-      where: { spotifyId: playlistId },
-      select: {
-        id: true,
-        userId: true,
-        trackCount: true,
-        tracks: {
-          include: {
-            track: true,
-          },
-          orderBy: {
-            position: "asc",
-          },
-        },
-      },
-    });
-
-    if (!playlist) {
-      return Response.json({ error: "Playlist not found" }, { status: 404 });
+    if (!userId) {
+      return Response.json({ error: "User ID is required" }, { status: 400 });
     }
 
-    // Return cached tracks if available and refresh not requested
-    if (!refresh && playlist.tracks.length > 0) {
+    // Check cache first (30-second TTL)
+    const cacheKey = cacheKeys.spotifyTracks(playlistId);
+    const cached = apiCache.get<SpotifyTrack[]>(cacheKey);
+
+    if (cached) {
       return Response.json({
-        tracks: playlist.tracks.map((pt) => ({
-          id: pt.track.spotifyId!,
-          name: pt.track.name,
-          artist: pt.track.artist,
-          album: pt.track.album,
-          position: pt.position,
+        tracks: cached.map((track, index) => ({
+          ...spotifyTrackToGeneric(track),
+          position: index,
         })),
-        trackCount: playlist.trackCount || playlist.tracks.length,
         cached: true,
       });
     }
 
     // Get user's refresh token
     const user = await prisma.user.findUnique({
-      where: { id: playlist.userId },
+      where: { id: userId },
       select: {
         spotifyRefreshToken: true,
       },
@@ -96,67 +76,22 @@ export async function GET(
       return Response.json({ error: "User not connected to Spotify" }, { status: 400 });
     }
 
-    // Refresh access token
+    // Refresh access token and fetch fresh tracks
     const { access_token: accessToken } = await refreshSpotifyToken(user.spotifyRefreshToken);
-
-    // Fetch fresh tracks
     const spotifyTracks = await fetchPlaylistTracks(playlistId, accessToken);
 
-    // Update tracks in database
-    await prisma.$transaction(async (tx) => {
-      // First, remove all existing tracks for this playlist
-      await tx.playlistTrack.deleteMany({
-        where: { playlistId: playlist.id },
-      });
+    // Cache the raw API response
+    apiCache.set(cacheKey, spotifyTracks);
 
-      // Update the playlist's trackCount
-      await tx.playlist.update({
-        where: { id: playlist.id },
-        data: { trackCount: spotifyTracks.length },
-      });
-
-      // Then create or update tracks and their relationships
-      for (const [index, track] of spotifyTracks.entries()) {
-        const trackRecord = await tx.track.upsert({
-          where: { spotifyId: track.id },
-          create: {
-            spotifyId: track.id,
-            name: track.name,
-            artist: track.artists.map((a) => a.name).join(", "),
-            album: track.album.name,
-          },
-          update: {
-            name: track.name,
-            artist: track.artists.map((a) => a.name).join(", "),
-            album: track.album.name,
-          },
-        });
-
-        await tx.playlistTrack.create({
-          data: {
-            playlistId: playlist.id,
-            trackId: trackRecord.id,
-            position: index,
-          },
-        });
-      }
-    });
-
-    // Return updated tracks
-    const updatedTracks = spotifyTracks.map((track, index) => ({
-      id: track.id,
-      name: track.name,
-      artist: track.artists.map((a) => a.name).join(", "),
-      album: track.album.name,
-      position: index,
-    }));
-
+    // Return normalized tracks
     return Response.json({
-      tracks: updatedTracks,
-      trackCount: spotifyTracks.length,
+      tracks: spotifyTracks.map((track, index) => ({
+        ...spotifyTrackToGeneric(track),
+        position: index,
+      })),
     });
   } catch (error) {
-    console.error("Error fetching tracks:", error);
+    console.error("Error fetching Spotify tracks:", error);
     return Response.json({ error: "Failed to fetch tracks" }, { status: 500 });
   }
 }
@@ -188,60 +123,15 @@ export async function POST(
     // Refresh access token
     const { access_token: accessToken } = await refreshSpotifyToken(user.spotifyRefreshToken);
 
-    // Add tracks to playlist
+    // Add tracks directly to Spotify - no database operations needed
     await addTracksToPlaylist(playlistId, trackIds, accessToken);
 
-    // Update database
-    const playlist = await prisma.playlist.findUnique({
-      where: { spotifyId: playlistId },
-      select: { id: true },
-    });
-
-    if (!playlist) {
-      return Response.json({ error: "Playlist not found" }, { status: 404 });
-    }
-
-    // Create or update tracks and their relationships
-    await prisma.$transaction(async (tx) => {
-      const currentPosition = await tx.playlistTrack.count({
-        where: { playlistId: playlist.id },
-      });
-
-      for (const [index, trackId] of trackIds.entries()) {
-        const trackRecord = await tx.track.upsert({
-          where: { spotifyId: trackId },
-          create: {
-            spotifyId: trackId,
-            name: "", // These will be updated on next GET refresh
-            artist: "",
-            album: "",
-          },
-          update: {},
-        });
-
-        await tx.playlistTrack.create({
-          data: {
-            playlistId: playlist.id,
-            trackId: trackRecord.id,
-            position: currentPosition + index,
-          },
-        });
-      }
-
-      // Update track count
-      await tx.playlist.update({
-        where: { id: playlist.id },
-        data: {
-          trackCount: {
-            increment: trackIds.length,
-          },
-        },
-      });
-    });
+    // Invalidate cache so next fetch gets fresh data
+    apiCache.invalidate(cacheKeys.spotifyTracks(playlistId));
 
     return Response.json({ success: true });
   } catch (error) {
-    console.error("Error adding tracks:", error);
+    console.error("Error adding tracks to Spotify:", error);
     return Response.json({ error: "Failed to add tracks" }, { status: 500 });
   }
 }
