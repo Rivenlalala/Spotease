@@ -75,6 +75,7 @@ export const cacheKeys = {
   spotifyTracks: (playlistId: string) => `spotify:tracks:${playlistId}`,
   neteaseTracks: (playlistId: string) => `netease:tracks:${playlistId}`,
   trackPairings: () => "track:pairings:all",
+  linkedPlaylists: (userId: string) => `linked:playlists:${userId}`,
 };
 
 // Cleanup expired entries every 5 minutes
