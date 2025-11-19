@@ -5,6 +5,19 @@
 **Date**: 2025-11-19
 **Document Purpose**: Comprehensive user stories for rebuilding Spotease from scratch
 
+> **🚀 Quick Start:** Don't want to manually create 47 GitHub issues? Use the automation scripts!
+> ```bash
+> # Dry run to see what will be created
+> ./scripts/create-github-issues.sh --dry-run
+>
+> # Create all issues automatically
+> ./scripts/create-github-issues.sh
+>
+> # Or create only MVP stories (~35 issues)
+> ./scripts/create-github-issues.sh --mvp-only
+> ```
+> See [scripts/README.md](scripts/README.md) for full instructions.
+
 ---
 
 ## Executive Summary
