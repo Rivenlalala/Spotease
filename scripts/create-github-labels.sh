@@ -33,9 +33,21 @@ create_label() {
     if gh label list | grep -q "^${name}"; then
         echo "  ⏭️  Already exists: $name"
     else
-        gh label create "$name" --color "$color" --description "$description" 2>/dev/null && \
-            echo "  ✅ Created: $name" || \
-            echo "  ⚠️  Failed: $name"
+        echo "  🔄 Creating: $name (color: #$color)"
+
+        # Capture output and error
+        output=$(gh label create "$name" --color "$color" --description "$description" 2>&1)
+        exit_code=$?
+
+        if [ $exit_code -eq 0 ]; then
+            echo "  ✅ Created: $name"
+        else
+            echo "  ❌ FAILED: $name"
+            echo "     Exit code: $exit_code"
+            echo "     Error output:"
+            echo "$output" | sed 's/^/     /'
+            echo ""
+        fi
     fi
 }
 

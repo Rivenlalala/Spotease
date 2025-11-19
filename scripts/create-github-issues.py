@@ -114,6 +114,7 @@ class IssueCreator:
         # Create the issue using gh CLI
         try:
             print(f"  ✅ Creating: {title}")
+            print(f"     Labels: {', '.join(labels)}")
 
             result = subprocess.run(
                 [
@@ -131,6 +132,10 @@ class IssueCreator:
             issue_match = re.search(r'#(\d+)', result.stdout)
             if issue_match:
                 print(f"     Created: #{issue_match.group(1)}")
+            else:
+                print(f"     Created successfully")
+                if result.stdout.strip():
+                    print(f"     Output: {result.stdout.strip()}")
 
             self.created_stories += 1
 
@@ -140,7 +145,22 @@ class IssueCreator:
             return True
 
         except subprocess.CalledProcessError as e:
-            print(f"  ⚠️  Failed to create issue: {e}")
+            print(f"{Colors.RED}  ❌ FAILED to create issue{Colors.ENDC}")
+            print(f"     Exit code: {e.returncode}")
+
+            if e.stdout and e.stdout.strip():
+                print(f"     STDOUT:")
+                for line in e.stdout.strip().split('\n'):
+                    print(f"       {line}")
+
+            if e.stderr and e.stderr.strip():
+                print(f"     STDERR:")
+                for line in e.stderr.strip().split('\n'):
+                    print(f"       {line}")
+
+            print(f"     Command: {' '.join(e.cmd)}")
+            print()
+
             return False
 
     def parse_and_create_issues(self) -> None:
@@ -239,6 +259,67 @@ class IssueCreator:
                 story_effort
             )
 
+    def print_debug_info(self) -> None:
+        """Print debug information"""
+        print("Debug Information:")
+
+        # Get gh version
+        try:
+            result = subprocess.run(
+                ["gh", "--version"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            version = result.stdout.split('\n')[0]
+            print(f"  gh version: {version}")
+        except Exception as e:
+            print(f"  gh version: Error - {e}")
+
+        # Get current directory
+        print(f"  Current directory: {Path.cwd()}")
+
+        # Get repository info
+        try:
+            result = subprocess.run(
+                ["gh", "repo", "view", "--json", "nameWithOwner,url"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            import json
+            repo_data = json.loads(result.stdout)
+            print(f"  Repository: {repo_data.get('nameWithOwner', 'Unknown')}")
+            print(f"  URL: {repo_data.get('url', 'Unknown')}")
+        except subprocess.CalledProcessError as e:
+            print(f"  {Colors.YELLOW}⚠️  Warning: Could not detect repository{Colors.ENDC}")
+            print(f"     Make sure you're in a git repository and have push access")
+            if e.stderr:
+                print(f"     Error: {e.stderr.strip()}")
+        except Exception as e:
+            print(f"  {Colors.YELLOW}⚠️  Warning: Could not detect repository{Colors.ENDC}")
+            print(f"     Error: {e}")
+
+        # Get authenticated user
+        try:
+            result = subprocess.run(
+                ["gh", "api", "user", "--jq", ".login"],
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            username = result.stdout.strip()
+            print(f"  Authenticated as: {username}")
+        except subprocess.CalledProcessError as e:
+            print(f"  {Colors.YELLOW}⚠️  Warning: Could not get auth user{Colors.ENDC}")
+            if e.stderr:
+                print(f"     Error: {e.stderr.strip()}")
+        except Exception as e:
+            print(f"  {Colors.YELLOW}⚠️  Warning: Could not get auth user{Colors.ENDC}")
+            print(f"     Error: {e}")
+
+        print()
+
     def print_summary(self) -> None:
         """Print summary of created issues"""
         print(f"\n{Colors.BOLD}{'=' * 50}{Colors.ENDC}")
@@ -274,6 +355,9 @@ class IssueCreator:
 
         if not self.check_prerequisites():
             return 1
+
+        # Show debug information
+        self.print_debug_info()
 
         try:
             self.parse_and_create_issues()

@@ -60,6 +60,33 @@ echo "Dry Run: $DRY_RUN"
 echo "MVP Only: $MVP_ONLY"
 echo ""
 
+# Show debug information
+echo "Debug Information:"
+echo "  gh version: $(gh --version | head -1)"
+echo "  Current directory: $(pwd)"
+
+# Get repository info
+repo_info=$(gh repo view --json nameWithOwner,url 2>&1)
+if [ $? -eq 0 ]; then
+    echo "  Repository: $(echo "$repo_info" | grep -o '"nameWithOwner":"[^"]*"' | cut -d'"' -f4)"
+    echo "  URL: $(echo "$repo_info" | grep -o '"url":"[^"]*"' | cut -d'"' -f4)"
+else
+    echo "  ⚠️  Warning: Could not detect repository"
+    echo "     Make sure you're in a git repository and have push access"
+    echo "     Error: $repo_info"
+fi
+
+# Check auth status with details
+auth_user=$(gh api user --jq '.login' 2>&1)
+if [ $? -eq 0 ]; then
+    echo "  Authenticated as: $auth_user"
+else
+    echo "  ⚠️  Warning: Could not get auth user"
+    echo "     Error: $auth_user"
+fi
+
+echo ""
+
 # Story counter
 TOTAL_STORIES=0
 CREATED_STORIES=0
@@ -99,14 +126,34 @@ create_issue() {
         fi
 
         echo "  ✅ Creating: $title"
+        echo "     Labels: $labels"
 
-        gh issue create \
+        # Create issue and capture output
+        output=$(gh issue create \
             --title "$title" \
             --body "$body" \
             --label "$labels" \
-            2>&1 | grep -o "#[0-9]*" || echo "  ⚠️  Failed to create issue"
+            2>&1)
 
-        CREATED_STORIES=$((CREATED_STORIES + 1))
+        exit_code=$?
+
+        if [ $exit_code -eq 0 ]; then
+            # Extract issue number from output
+            issue_num=$(echo "$output" | grep -o "#[0-9]*" || echo "")
+            if [ -n "$issue_num" ]; then
+                echo "     Created: $issue_num"
+            else
+                echo "     Created successfully"
+                echo "     Output: $output"
+            fi
+            CREATED_STORIES=$((CREATED_STORIES + 1))
+        else
+            echo "  ❌ FAILED to create issue"
+            echo "     Exit code: $exit_code"
+            echo "     Error output:"
+            echo "$output" | sed 's/^/     /'
+            echo ""
+        fi
 
         # Small delay to avoid rate limiting
         sleep 0.5
