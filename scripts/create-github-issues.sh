@@ -234,14 +234,14 @@ while IFS= read -r line; do
         # Extract priority
         if [[ "$line" =~ ^\*\*Priority:\*\*\ (.+)$ ]]; then
             story_priority="${BASH_REMATCH[1]}"
-            story_body="$story_body\n$line"
+            story_body="$story_body"$'\n'"$line"
             continue
         fi
 
         # Extract effort
         if [[ "$line" =~ ^\*\*Estimated\ Effort:\*\*\ ([0-9]+)\ story\ point ]]; then
             story_effort="${BASH_REMATCH[1]}sp"
-            story_body="$story_body\n$line"
+            story_body="$story_body"$'\n'"$line"
             continue
         fi
 
@@ -258,7 +258,7 @@ while IFS= read -r line; do
         fi
 
         # Add line to body
-        story_body="$story_body\n$line"
+        story_body="$story_body"$'\n'"$line"
     fi
 done < "$USER_STORIES_FILE"
 
