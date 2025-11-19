@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Spotease - Automatically create GitHub issues from USER_STORIES.md
-# Usage: ./scripts/create-github-issues.sh [--dry-run] [--mvp-only]
+# Usage: ./scripts/create-github-issues.sh [--dry-run] [--mvp-only] [--test]
 
 set -e
 
@@ -11,6 +11,7 @@ USER_STORIES_FILE="$PROJECT_ROOT/USER_STORIES.md"
 
 DRY_RUN=false
 MVP_ONLY=false
+TEST_MODE=false
 
 # Parse arguments
 while [[ $# -gt 0 ]]; do
@@ -23,9 +24,13 @@ while [[ $# -gt 0 ]]; do
       MVP_ONLY=true
       shift
       ;;
+    --test)
+      TEST_MODE=true
+      shift
+      ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [--dry-run] [--mvp-only]"
+      echo "Usage: $0 [--dry-run] [--mvp-only] [--test]"
       exit 1
       ;;
   esac
@@ -58,7 +63,13 @@ echo ""
 echo "User Stories File: $USER_STORIES_FILE"
 echo "Dry Run: $DRY_RUN"
 echo "MVP Only: $MVP_ONLY"
+echo "Test Mode: $TEST_MODE"
 echo ""
+
+if [ "$TEST_MODE" = true ]; then
+    echo "⚠️  TEST MODE: Will create only ONE issue and stop"
+    echo ""
+fi
 
 # Show debug information
 echo "Debug Information:"
@@ -147,12 +158,34 @@ create_issue() {
                 echo "     Output: $output"
             fi
             CREATED_STORIES=$((CREATED_STORIES + 1))
+
+            # If test mode, exit after first successful creation
+            if [ "$TEST_MODE" = true ]; then
+                echo ""
+                echo "✅ Test mode: Successfully created one issue!"
+                echo "   Review it on GitHub to verify labels and formatting."
+                echo "   If it looks good, run without --test to create all issues."
+                echo ""
+                echo "Summary:"
+                echo "  Created: 1 issue"
+                echo ""
+                exit 0
+            fi
         else
             echo "  ❌ FAILED to create issue"
             echo "     Exit code: $exit_code"
             echo "     Error output:"
             echo "$output" | sed 's/^/     /'
             echo ""
+
+            # If test mode, exit after first failure
+            if [ "$TEST_MODE" = true ]; then
+                echo ""
+                echo "❌ Test mode: Failed to create test issue!"
+                echo "   Fix the errors above before trying again."
+                echo ""
+                exit 1
+            fi
         fi
 
         # Small delay to avoid rate limiting

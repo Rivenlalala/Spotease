@@ -25,9 +25,10 @@ class Colors:
 
 
 class IssueCreator:
-    def __init__(self, dry_run: bool = False, mvp_only: bool = False):
+    def __init__(self, dry_run: bool = False, mvp_only: bool = False, test_mode: bool = False):
         self.dry_run = dry_run
         self.mvp_only = mvp_only
+        self.test_mode = test_mode
         self.total_stories = 0
         self.created_stories = 0
         self.skipped_stories = 0
@@ -139,6 +140,18 @@ class IssueCreator:
 
             self.created_stories += 1
 
+            # If test mode, exit after first successful creation
+            if self.test_mode:
+                print()
+                print(f"{Colors.GREEN}✅ Test mode: Successfully created one issue!{Colors.ENDC}")
+                print("   Review it on GitHub to verify labels and formatting.")
+                print("   If it looks good, run without --test to create all issues.")
+                print()
+                print("Summary:")
+                print("  Created: 1 issue")
+                print()
+                sys.exit(0)
+
             # Small delay to avoid rate limiting
             time.sleep(0.5)
 
@@ -160,6 +173,14 @@ class IssueCreator:
 
             print(f"     Command: {' '.join(e.cmd)}")
             print()
+
+            # If test mode, exit after first failure
+            if self.test_mode:
+                print()
+                print(f"{Colors.RED}❌ Test mode: Failed to create test issue!{Colors.ENDC}")
+                print("   Fix the errors above before trying again.")
+                print()
+                sys.exit(1)
 
             return False
 
@@ -354,7 +375,11 @@ class IssueCreator:
         print(f"{Colors.BOLD}{'=' * 50}{Colors.ENDC}")
         print(f"\nUser Stories File: {self.user_stories_file}")
         print(f"Dry Run: {self.dry_run}")
-        print(f"MVP Only: {self.mvp_only}\n")
+        print(f"MVP Only: {self.mvp_only}")
+        print(f"Test Mode: {self.test_mode}\n")
+
+        if self.test_mode:
+            print(f"{Colors.YELLOW}⚠️  TEST MODE: Will create only ONE issue and stop{Colors.ENDC}\n")
 
         if not self.check_prerequisites():
             return 1
@@ -385,10 +410,15 @@ def main():
         action="store_true",
         help="Only create 'Must Have' (MVP) stories"
     )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Create only ONE issue for testing, then stop"
+    )
 
     args = parser.parse_args()
 
-    creator = IssueCreator(dry_run=args.dry_run, mvp_only=args.mvp_only)
+    creator = IssueCreator(dry_run=args.dry_run, mvp_only=args.mvp_only, test_mode=args.test)
     sys.exit(creator.run())
 
 

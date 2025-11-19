@@ -50,6 +50,9 @@ Automatically creates GitHub issues from the `USER_STORIES.md` file. Available i
 # Dry run (see what would be created without creating issues)
 ./scripts/create-github-issues.sh --dry-run
 
+# Test mode (create ONLY ONE real issue to verify everything works)
+./scripts/create-github-issues.sh --test
+
 # Create ALL 47 user stories as GitHub issues
 ./scripts/create-github-issues.sh
 
@@ -65,6 +68,9 @@ Automatically creates GitHub issues from the `USER_STORIES.md` file. Available i
 ```bash
 # Dry run
 python scripts/create-github-issues.py --dry-run
+
+# Test mode (create ONLY ONE real issue)
+python scripts/create-github-issues.py --test
 
 # Create all issues
 python scripts/create-github-issues.py
@@ -161,23 +167,33 @@ The script will create issues with the following labels:
    ./scripts/create-github-issues.sh --dry-run
    ```
 
-2. **Create MVP first** to get started quickly:
+2. **Test with one real issue first** (recommended!):
+   ```bash
+   ./scripts/create-github-issues.sh --test
+   ```
+   This creates just ONE issue so you can:
+   - Verify authentication works
+   - Check that labels are applied correctly
+   - Review the issue body formatting on GitHub
+   - Delete just one test issue if something is wrong
+
+3. **Create MVP first** to get started quickly:
    ```bash
    ./scripts/create-github-issues.sh --mvp-only
    ```
 
-3. **Labels are created automatically** by the label script:
+4. **Labels are created automatically** by the label script:
    ```bash
    # Run this first (creates all 16 labels)
    ./scripts/create-github-labels.sh
    ```
 
-4. **Review issues** after creation:
+5. **Review issues** after creation:
    ```bash
    gh issue list --label "story"
    ```
 
-5. **Add to GitHub Project** (if you have one):
+6. **Add to GitHub Project** (if you have one):
    ```bash
    # After creating issues, bulk add them to a project
    gh project item-add <PROJECT-NUMBER> --owner <OWNER> --url <ISSUE-URL>
