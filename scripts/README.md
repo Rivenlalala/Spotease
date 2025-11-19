@@ -35,6 +35,13 @@ Automatically creates GitHub issues from the `USER_STORIES.md` file. Available i
    cd /path/to/Spotease
    ```
 
+4. **Create GitHub labels first** (Important!)
+   ```bash
+   ./scripts/create-github-labels.sh
+   ```
+
+   This creates all 16 labels needed for the issues. Without this step, issue creation may fail or create labels inconsistently.
+
 ### Usage
 
 #### Bash Script
@@ -82,7 +89,7 @@ The script will:
      - Epic label (e.g., `epic: project-setup-and-infrastructure`)
      - Priority label (e.g., `priority: must-have`)
      - Effort label (e.g., `effort: 3sp`)
-     - Type label: `user-story`
+     - Type label: `story`
 
 3. **Output** progress in terminal with colored formatting
 4. **Add delays** between issues to avoid rate limiting
@@ -145,7 +152,7 @@ The script will create issues with the following labels:
 - `effort: 1sp` through `effort: 8sp`
 
 **Type Label:**
-- `user-story`
+- `story`
 
 ### Tips
 
@@ -159,18 +166,15 @@ The script will create issues with the following labels:
    ./scripts/create-github-issues.sh --mvp-only
    ```
 
-3. **Create labels manually** before running (optional):
+3. **Labels are created automatically** by the label script:
    ```bash
-   # The script will create issues even if labels don't exist,
-   # but you can pre-create them for better organization
-   gh label create "epic: user-authentication" --color "0052CC"
-   gh label create "priority: must-have" --color "D73A4A"
-   gh label create "user-story" --color "FBCA04"
+   # Run this first (creates all 16 labels)
+   ./scripts/create-github-labels.sh
    ```
 
 4. **Review issues** after creation:
    ```bash
-   gh issue list --label "user-story"
+   gh issue list --label "story"
    ```
 
 5. **Add to GitHub Project** (if you have one):
@@ -218,7 +222,7 @@ The script doesn't update existing issues. To update:
 
 ```bash
 # List issues
-gh issue list --label "user-story"
+gh issue list --label "story"
 
 # Edit an issue
 gh issue edit 123 --body "New description"
@@ -227,8 +231,8 @@ gh issue edit 123 --body "New description"
 #### Delete All Created Issues (if needed)
 
 ```bash
-# List all user-story issues
-gh issue list --label "user-story" --state all --limit 100 --json number -q '.[].number' | \
+# List all story issues
+gh issue list --label "story" --state all --limit 100 --json number -q '.[].number' | \
   xargs -I {} gh issue close {} --reason "not planned"
 ```
 

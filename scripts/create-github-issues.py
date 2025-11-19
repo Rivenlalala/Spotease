@@ -97,7 +97,7 @@ class IssueCreator:
             return False
 
         # Build labels list
-        labels = [epic_label, priority_label, "user-story"]
+        labels = [epic_label, priority_label, "story"]
         if effort:
             labels.append(f"effort: {effort}")
 

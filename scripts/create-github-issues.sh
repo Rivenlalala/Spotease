@@ -91,7 +91,7 @@ create_issue() {
         CREATED_STORIES=$((CREATED_STORIES + 1))
     else
         # Create the issue
-        local labels="$epic_label,$priority_label,user-story"
+        local labels="$epic_label,$priority_label,story"
 
         # Add effort as a label if provided
         if [ -n "$effort" ]; then
