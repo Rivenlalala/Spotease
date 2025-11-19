@@ -39,8 +39,8 @@ export default function LinkPlaylistsButton({
                 "Content-Type": "application/json",
               },
               body: JSON.stringify({
-                spotifyId: spotifyPlaylist.id,
-                neteaseId: neteasePlaylist.id,
+                spotifyPlaylistId: spotifyPlaylist.id,
+                neteasePlaylistId: neteasePlaylist.id,
                 userId: userId,
               }),
             });
