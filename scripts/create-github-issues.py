@@ -183,8 +183,11 @@ class IssueCreator:
             epic_match = re.match(r'^## EPIC (\d+): (.+)$', line)
             if epic_match:
                 current_epic = epic_match.group(2)
-                # Create epic label (lowercase, hyphenated)
-                current_epic_label = "epic: " + current_epic.lower().replace(' ', '-').replace('&', 'and')
+                # Create epic label (lowercase, hyphenated, & -> and, remove commas)
+                # First replace " & " with " and ", remove commas, then lowercase and replace spaces with hyphens
+                label_text = current_epic.replace(' & ', ' and ').replace('&', 'and').replace(',', '')
+                label_text = label_text.lower().replace(' ', '-')
+                current_epic_label = "epic: " + label_text
                 print(f"\n{Colors.BLUE}📦 EPIC: {current_epic}{Colors.ENDC}")
                 print("─" * 50)
                 continue

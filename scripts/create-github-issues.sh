@@ -196,8 +196,9 @@ while IFS= read -r line; do
     # Detect Epic headers
     if [[ "$line" =~ ^##\ EPIC\ ([0-9]+):\ (.+)$ ]]; then
         current_epic="${BASH_REMATCH[2]}"
-        # Create epic label (lowercase, hyphenated)
-        current_epic_label=$(echo "$current_epic" | tr '[:upper:]' '[:lower:]' | tr ' ' '-' | tr '&' 'and')
+        # Create epic label (lowercase, hyphenated, & -> and, remove commas)
+        # First replace " & " with " and ", remove commas, then lowercase, then replace spaces with hyphens
+        current_epic_label=$(echo "$current_epic" | sed 's/ & / and /g' | sed 's/&/and/g' | sed 's/,//g' | tr '[:upper:]' '[:lower:]' | tr ' ' '-')
         current_epic_label="epic: $current_epic_label"
         echo ""
         echo "📦 EPIC: $current_epic"
