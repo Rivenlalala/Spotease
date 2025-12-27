@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: spotease-backend
+  datasource:
+    url: jdbc:postgresql://localhost:5432/spotease
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8080
+
+spotease:
+  encryption:
+    key: changeme32characterlongsecretkey
+  spotify:
+    client-id: ${SPOTIFY_CLIENT_ID:changeme}
+    client-secret: ${SPOTIFY_CLIENT_SECRET:changeme}
+    redirect-uri: http://localhost:8080/api/auth/spotify/callback
