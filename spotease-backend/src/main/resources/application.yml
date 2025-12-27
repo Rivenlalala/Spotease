@@ -3,12 +3,12 @@ spring:
     name: spotease-backend
   datasource:
     url: jdbc:postgresql://localhost:5432/spotease
-    username: postgres
-    password: postgres
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
   jpa:
     hibernate:
-      ddl-auto: update
-    show-sql: true
+      ddl-auto: ${DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:true}
     properties:
       hibernate:
         format_sql: true
@@ -18,7 +18,7 @@ server:
 
 spotease:
   encryption:
-    key: changeme32characterlongsecretkey
+    key: ${ENCRYPTION_KEY}
   spotify:
     client-id: ${SPOTIFY_CLIENT_ID:changeme}
     client-secret: ${SPOTIFY_CLIENT_SECRET:changeme}
