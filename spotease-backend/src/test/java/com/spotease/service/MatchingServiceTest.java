@@ -191,4 +191,46 @@ class MatchingServiceTest {
     // Similar artist should score higher than different artist
     assertThat(similarResult.getMatchConfidence()).isGreaterThan(differentResult.getMatchConfidence());
   }
+
+  @Test
+  void shouldFallbackToTier2WhenTier1ReturnsEmpty() {
+    SpotifyTrack source = createSpotifyTrack("1", "Test Song", List.of("Test Artist"), 240000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Test Song", List.of("Test Artist"), 240000);
+
+    // First call (tier 1 with quotes) returns empty
+    when(neteaseService.searchTrack("\"Test Song\" Test Artist", "token"))
+        .thenReturn(List.of());
+
+    // Second call (tier 2 without quotes) returns results
+    when(neteaseService.searchTrack("Test Song Test Artist", "token"))
+        .thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    assertThat(result.getStatus()).isNotEqualTo(MatchStatus.FAILED);
+    assertThat(result.getDestinationTrackId()).isNotNull();
+  }
+
+  @Test
+  void shouldFallbackToTier3WhenTier2ReturnsEmpty() {
+    SpotifyTrack source = createSpotifyTrack("1", "Test Song", List.of("Test Artist"), 240000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Test Song", List.of("Different Artist"), 240000);
+
+    // Tier 1 returns empty
+    when(neteaseService.searchTrack("\"Test Song\" Test Artist", "token"))
+        .thenReturn(List.of());
+
+    // Tier 2 returns empty
+    when(neteaseService.searchTrack("Test Song Test Artist", "token"))
+        .thenReturn(List.of());
+
+    // Tier 3 (name only) returns results
+    when(neteaseService.searchTrack("Test Song", "token"))
+        .thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    assertThat(result.getStatus()).isNotEqualTo(MatchStatus.FAILED);
+    assertThat(result.getDestinationTrackId()).isNotNull();
+  }
 }

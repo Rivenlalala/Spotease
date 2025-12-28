@@ -20,6 +20,7 @@ public class MatchingService {
 
   private static final double AUTO_MATCH_THRESHOLD = 0.85;
   private static final double REVIEW_THRESHOLD = 0.60;
+  private static final int MAX_SEARCH_RESULTS = 5;
 
   private final SpotifyService spotifyService;
   private final NeteaseService neteaseService;
@@ -45,13 +46,12 @@ public class MatchingService {
 
     log.debug("Finding best match for track: {} by {}", trackName, artistName);
 
-    // Search for the track on the destination platform
-    String query = buildQuery(trackName, artistName);
-    List<?> searchResults = search(query, accessToken, destinationPlatform);
+    // Search for the track on the destination platform with fallback
+    List<?> searchResults = searchWithFallback(accessToken, sourceTrack, destinationPlatform);
 
     // If no results found, return failed match
     if (searchResults.isEmpty()) {
-      log.debug("No search results found for: {}", query);
+      log.debug("No search results found for track: {}", trackName);
       return createFailedMatch(sourceTrackId, job);
     }
 
@@ -76,30 +76,65 @@ public class MatchingService {
   }
 
   /**
-   * Build a search query string from track name and artist.
+   * Search with 3-tier fallback strategy.
    *
-   * @param trackName the track name
-   * @param artistName the artist name
-   * @return the formatted query
-   */
-  private String buildQuery(String trackName, String artistName) {
-    return String.format("\"%s\" %s", trackName, artistName);
-  }
-
-  /**
-   * Search for tracks on the specified platform.
-   *
-   * @param query the search query
    * @param accessToken the access token
+   * @param sourceTrack the source track
    * @param platform the platform to search on
    * @return list of search results
    */
-  private List<?> search(String query, String accessToken, Platform platform) {
+  private List<?> searchWithFallback(String accessToken, Object sourceTrack, Platform platform) {
+    String trackName = getTrackName(sourceTrack);
+    String firstArtist = getFirstArtist(sourceTrack);
+
+    // Tier 1: "{track name}" {first artist}
+    String query1 = String.format("\"%s\" %s", trackName, firstArtist);
+    List<?> results = executeSearch(accessToken, query1, platform);
+    if (!results.isEmpty()) {
+      log.debug("Search tier 1 returned {} results", results.size());
+      return limitResults(results);
+    }
+
+    // Tier 2: {track name} {first artist}
+    String query2 = String.format("%s %s", trackName, firstArtist);
+    results = executeSearch(accessToken, query2, platform);
+    if (!results.isEmpty()) {
+      log.debug("Search tier 2 returned {} results", results.size());
+      return limitResults(results);
+    }
+
+    // Tier 3: {track name}
+    results = executeSearch(accessToken, trackName, platform);
+    log.debug("Search tier 3 returned {} results", results.size());
+    return limitResults(results);
+  }
+
+  /**
+   * Execute a search on the specified platform.
+   *
+   * @param accessToken the access token
+   * @param query the search query
+   * @param platform the platform to search on
+   * @return list of search results
+   */
+  private List<?> executeSearch(String accessToken, String query, Platform platform) {
     if (platform == Platform.NETEASE) {
       return neteaseService.searchTrack(query, accessToken);
     } else {
-      return spotifyService.searchTrack(query, accessToken);
+      return spotifyService.searchTrack(accessToken, query);
     }
+  }
+
+  /**
+   * Limit search results to MAX_SEARCH_RESULTS.
+   *
+   * @param results the full list of results
+   * @return limited list of results
+   */
+  private List<?> limitResults(List<?> results) {
+    return results.size() > MAX_SEARCH_RESULTS
+        ? results.subList(0, MAX_SEARCH_RESULTS)
+        : results;
   }
 
   /**
