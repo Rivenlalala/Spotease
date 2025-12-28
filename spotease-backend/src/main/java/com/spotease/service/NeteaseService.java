@@ -217,7 +217,27 @@ public class NeteaseService {
   }
 
   public String createPlaylist(String cookie, String playlistName) {
-    // TODO: Implement using NetEase API
-    return "new-playlist-id";
+    try {
+      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = webClient
+          .get()
+          .uri(uriBuilder -> uriBuilder
+              .path("/playlist/create")
+              .queryParam("name", playlistName)
+              .queryParam("privacy", 10) // 10 = private
+              .build())
+          .header("Cookie", "MUSIC_U=" + cookie)
+          .retrieve()
+          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {})
+          .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+          .block();
+
+      if (response != null && response.getData() != null && response.getData().getPlaylist() != null) {
+        return response.getData().getPlaylist().getId();
+      }
+
+      throw new RuntimeException("Failed to create NetEase playlist: Invalid response");
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create NetEase playlist", e);
+    }
   }
 }

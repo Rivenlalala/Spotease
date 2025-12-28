@@ -6,14 +6,17 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.model_objects.specification.Paging;
+import se.michaelthelin.spotify.model_objects.specification.Playlist;
 import se.michaelthelin.spotify.model_objects.specification.PlaylistSimplified;
 import se.michaelthelin.spotify.model_objects.specification.PlaylistTrack;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.data.playlists.AddItemsToPlaylistRequest;
+import se.michaelthelin.spotify.requests.data.playlists.CreatePlaylistRequest;
 import se.michaelthelin.spotify.requests.data.playlists.GetListOfCurrentUsersPlaylistsRequest;
 import se.michaelthelin.spotify.requests.data.playlists.GetPlaylistRequest;
 import se.michaelthelin.spotify.requests.data.playlists.GetPlaylistsItemsRequest;
 import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequest;
+import se.michaelthelin.spotify.requests.data.users_profile.GetCurrentUsersProfileRequest;
 
 import java.util.Arrays;
 import java.util.List;
@@ -136,8 +139,25 @@ public class SpotifyService {
   }
 
   public String createPlaylist(String accessToken, String playlistName) {
-    // TODO: Implement using Spotify SDK
-    return "new-playlist-id";
+    try {
+      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+
+      // Get current user ID
+      GetCurrentUsersProfileRequest profileRequest = authenticatedApi.getCurrentUsersProfile()
+          .build();
+      String userId = profileRequest.execute().getId();
+
+      // Create playlist
+      CreatePlaylistRequest createPlaylistRequest = authenticatedApi
+          .createPlaylist(userId, playlistName)
+          .public_(false)
+          .build();
+
+      Playlist playlist = createPlaylistRequest.execute();
+      return playlist.getId();
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to create Spotify playlist", e);
+    }
   }
 
   private SpotifyPlaylist mapToSpotifyPlaylist(PlaylistSimplified playlist) {
