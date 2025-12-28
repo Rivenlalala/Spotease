@@ -1,15 +1,10 @@
 import apiClient from "./client";
 
 export interface AuthStatus {
-  isAuthenticated: boolean;
+  authenticated: boolean;
+  userId?: number;
   spotifyConnected: boolean;
   neteaseConnected: boolean;
-  user?: {
-    id: string;
-    spotifyId?: string;
-    neteaseId?: string;
-    displayName?: string;
-  };
 }
 
 export interface SpotifyLoginResponse {
@@ -17,14 +12,14 @@ export interface SpotifyLoginResponse {
 }
 
 export interface NeteaseQRResponse {
-  key: string;
-  qrimg: string;
+  message: string;
+  qrKey: string;
+  qrImage: string;
 }
 
 export interface NeteaseQRStatusResponse {
-  code: number;
+  status: string;
   message: string;
-  cookie?: string;
 }
 
 export const authApi = {
@@ -39,7 +34,7 @@ export const authApi = {
   },
 
   generateNeteaseQR: async (): Promise<NeteaseQRResponse> => {
-    const response = await apiClient.get<NeteaseQRResponse>("/api/auth/netease/qr/generate");
+    const response = await apiClient.post<NeteaseQRResponse>("/api/auth/netease/qr");
     return response.data;
   },
 

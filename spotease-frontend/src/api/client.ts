@@ -8,13 +8,13 @@ const apiClient = axios.create({
   },
 });
 
-// Response interceptor for handling 401 errors
+// Response interceptor for error handling
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Redirect to login page or show login modal
-      window.location.href = "/";
+      // Handle unauthorized - could clear auth state here
+      console.error("Unauthorized request");
     }
     return Promise.reject(error);
   }
