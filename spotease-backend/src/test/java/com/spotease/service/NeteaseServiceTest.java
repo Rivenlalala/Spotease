@@ -148,6 +148,27 @@ class NeteaseServiceTest {
   }
 
   @Test
+  void shouldThrowExceptionWhenAccountProfileIsNull() {
+    // Given
+    String cookie = "test-cookie";
+    NeteaseResponse<Void> accountResponse = new NeteaseResponse<>();
+    accountResponse.setCode(200);
+    accountResponse.setProfile(null);  // Profile is null
+
+    when(webClient.get()).thenReturn(requestHeadersUriSpec);
+    when(requestHeadersUriSpec.uri(anyString())).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+        .thenReturn(Mono.just(accountResponse));
+
+    // When / Then
+    assertThatThrownBy(() -> neteaseService.getPlaylists(cookie))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Failed to get NetEase playlists");
+  }
+
+  @Test
   void shouldGetPlaylistTracks() {
     // Given
     String cookie = "test-cookie";
@@ -251,6 +272,28 @@ class NeteaseServiceTest {
   }
 
   @Test
+  void shouldThrowExceptionWhenPlaylistTracksResponseCodeIsNot200() {
+    // Given
+    String cookie = "test-cookie";
+    String playlistId = "playlist123";
+
+    NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = new NeteaseResponse<>();
+    response.setCode(404);
+
+    when(webClient.get()).thenReturn(requestHeadersUriSpec);
+    when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+        .thenReturn(Mono.just(response));
+
+    // When / Then
+    assertThatThrownBy(() -> neteaseService.getPlaylistTracks(cookie, playlistId))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Failed to get playlist tracks");
+  }
+
+  @Test
   void shouldSearchTrack() {
     // Given
     String cookie = "test-cookie";
@@ -334,6 +377,28 @@ class NeteaseServiceTest {
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
     when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class))).thenReturn(Mono.empty());
+
+    // When / Then
+    assertThatThrownBy(() -> neteaseService.searchTrack(cookie, query))
+        .isInstanceOf(RuntimeException.class)
+        .hasMessageContaining("Failed to search tracks");
+  }
+
+  @Test
+  void shouldThrowExceptionWhenSearchResponseCodeIsNot200() {
+    // Given
+    String cookie = "test-cookie";
+    String query = "test query";
+
+    NeteaseResponse<Void> response = new NeteaseResponse<>();
+    response.setCode(500);
+
+    when(webClient.get()).thenReturn(requestHeadersUriSpec);
+    when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
+    when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
+    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+        .thenReturn(Mono.just(response));
 
     // When / Then
     assertThatThrownBy(() -> neteaseService.searchTrack(cookie, query))
