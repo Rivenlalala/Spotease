@@ -135,6 +135,11 @@ public class SpotifyService {
     }
   }
 
+  public String createPlaylist(String accessToken, String playlistName) {
+    // TODO: Implement using Spotify SDK
+    return "new-playlist-id";
+  }
+
   private SpotifyPlaylist mapToSpotifyPlaylist(PlaylistSimplified playlist) {
     SpotifyPlaylist dto = new SpotifyPlaylist();
     dto.setId(playlist.getId());

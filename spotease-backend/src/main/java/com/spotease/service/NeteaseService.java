@@ -215,4 +215,9 @@ public class NeteaseService {
       throw new RuntimeException("Failed to add tracks to playlist", e);
     }
   }
+
+  public String createPlaylist(String cookie, String playlistName) {
+    // TODO: Implement using NetEase API
+    return "new-playlist-id";
+  }
 }
