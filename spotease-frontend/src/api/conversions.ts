@@ -1,6 +1,6 @@
 import apiClient from "./client";
-import { ConversionJob, CreateConversionRequest } from "@/types/conversion";
-import { TrackMatch } from "@/types/track";
+import type { ConversionJob, CreateConversionRequest } from "@/types/conversion";
+import type { TrackMatch } from "@/types/track";
 
 export const conversionsApi = {
   // Create new conversion job

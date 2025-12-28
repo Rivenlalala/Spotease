@@ -1,4 +1,4 @@
-import { Playlist } from '@/types/playlist';
+import type { Playlist } from '@/types/playlist';
 import PlaylistCard from './PlaylistCard';
 import { Skeleton } from '@/components/ui/skeleton';
 

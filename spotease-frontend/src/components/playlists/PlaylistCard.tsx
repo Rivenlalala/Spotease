@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Playlist } from '@/types/playlist';
+import type { Playlist } from '@/types/playlist';
 import { Music } from 'lucide-react';
 
 interface PlaylistCardProps {

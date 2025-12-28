@@ -4,7 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { conversionsApi } from '@/api/conversions';
-import { ConversionJob } from '@/types/conversion';
+import type { ConversionJob } from '@/types/conversion';
 import Layout from '@/components/layout/Layout';
 import ConversionJobCard from '@/components/conversions/ConversionJobCard';
 import { Button } from '@/components/ui/button';

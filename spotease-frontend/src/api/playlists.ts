@@ -1,5 +1,5 @@
 import apiClient from './client';
-import { Playlist, Platform } from '@/types/playlist';
+import type { Playlist, Platform } from '@/types/playlist';
 
 export const playlistsApi = {
   // Get Spotify playlists

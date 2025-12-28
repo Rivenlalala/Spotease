@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Platform, Playlist } from '@/types/playlist';
+import { Platform, type Playlist } from '@/types/playlist';
 import { ConversionMode } from '@/types/conversion';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 

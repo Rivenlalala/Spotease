@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { ConversionJob } from '@/types/conversion';
+import type { ConversionJob } from '@/types/conversion';
 
 interface UseWebSocketOptions {
   onJobUpdate?: (job: ConversionJob) => void;

@@ -1,6 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { TrackMatch } from '@/types/track';
+import type { TrackMatch } from '@/types/track';
 import { Music, Check, X } from 'lucide-react';
 
 interface TrackMatchCardProps {

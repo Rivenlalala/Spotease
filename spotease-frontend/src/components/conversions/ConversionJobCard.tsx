@@ -1,7 +1,8 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
-import { ConversionJob, JobStatus } from '@/types/conversion';
+import type { ConversionJob } from '@/types/conversion';
+import { JobStatus } from '@/types/conversion';
 import { ArrowRight, CheckCircle, Clock, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
