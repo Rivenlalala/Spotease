@@ -1,6 +1,7 @@
 package com.spotease.util;
 
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * Utility class for string similarity calculations.
@@ -9,6 +10,13 @@ import java.util.Objects;
  * algorithms such as Levenshtein distance.
  */
 public final class StringSimilarity {
+
+  // Pre-compiled regex patterns for performance
+  private static final Pattern FEATURING_PATTERN = Pattern.compile("\\bfeaturing\\b");
+  private static final Pattern FT_PATTERN = Pattern.compile("\\bft\\.");
+  private static final Pattern FEAT_DOT_PATTERN = Pattern.compile("\\bfeat\\.");
+  private static final Pattern SPECIAL_CHARS_PATTERN = Pattern.compile("[.,!?;:()\"'\\-]");
+  private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
 
   private StringSimilarity() {
     throw new UnsupportedOperationException("Utility class");
@@ -130,10 +138,9 @@ public final class StringSimilarity {
    * Normalize featuring variants to standard "feat"
    */
   private static String normalizeFeaturing(String input) {
-    return input
-        .replaceAll("\\bfeaturing\\b", "feat")
-        .replaceAll("\\bft\\.", "feat")
-        .replaceAll("\\bfeat\\.", "feat");
+    String result = FEATURING_PATTERN.matcher(input).replaceAll("feat");
+    result = FT_PATTERN.matcher(result).replaceAll("feat");
+    return FEAT_DOT_PATTERN.matcher(result).replaceAll("feat");
   }
 
   /**
@@ -141,9 +148,7 @@ public final class StringSimilarity {
    */
   private static String removeSpecialChars(String input) {
     // Remove: . , ! ? ; : ( ) " ' -
-    return input
-        .replaceAll("[.,!?;:()\"'\\-]", " ")
-        .replaceAll("\\s+", " ")
-        .trim();
+    String result = SPECIAL_CHARS_PATTERN.matcher(input).replaceAll(" ");
+    return WHITESPACE_PATTERN.matcher(result).replaceAll(" ").trim();
   }
 }
