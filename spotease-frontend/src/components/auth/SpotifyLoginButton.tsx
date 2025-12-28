@@ -14,7 +14,8 @@ const SpotifyLoginButton = () => {
 
       // Redirect to Spotify OAuth
       window.location.href = response.authUrl;
-    } catch (error) {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_error) {
       toast({
         title: 'Error',
         description: 'Failed to initiate Spotify login',
