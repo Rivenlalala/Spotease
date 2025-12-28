@@ -96,7 +96,7 @@ class SpotifyServiceTest {
     when(mockRequest.execute()).thenReturn(mockPaging);
 
     SearchTracksRequest.Builder mockBuilder = mock(SearchTracksRequest.Builder.class);
-    when(mockBuilder.limit(10)).thenReturn(mockBuilder);
+    when(mockBuilder.limit(5)).thenReturn(mockBuilder);
     when(mockBuilder.build()).thenReturn(mockRequest);
 
     when(authenticatedApi.searchTracks(anyString())).thenReturn(mockBuilder);
