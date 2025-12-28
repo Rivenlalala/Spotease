@@ -5,11 +5,9 @@ import lombok.Data;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
-public class NeteasePlaylist {
-  private String id;
-  private String name;
-  private String description;
-  private Integer trackCount;
-  private String coverImgUrl;
+public class NeteaseUserProfile {
   private Long userId;
+  private String nickname;
+  private String avatarUrl;
+  private String signature;
 }
