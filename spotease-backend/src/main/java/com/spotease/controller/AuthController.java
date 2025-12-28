@@ -89,4 +89,23 @@ public class AuthController {
     session.invalidate();
     return ResponseEntity.ok(Map.of("success", true));
   }
+
+  @PostMapping("/netease/qr")
+  public ResponseEntity<?> generateNeteaseQR() {
+    // TODO: Implement NetEase QR code generation
+    return ResponseEntity.ok(Map.of(
+        "message", "NetEase QR authentication not yet implemented",
+        "qrKey", "placeholder-key",
+        "qrImage", "data:image/png;base64,..."
+    ));
+  }
+
+  @GetMapping("/netease/qr/status")
+  public ResponseEntity<?> checkNeteaseQRStatus(@RequestParam String key) {
+    // TODO: Implement NetEase QR status polling
+    return ResponseEntity.ok(Map.of(
+        "status", "PENDING",
+        "message", "NetEase QR authentication not yet implemented"
+    ));
+  }
 }
