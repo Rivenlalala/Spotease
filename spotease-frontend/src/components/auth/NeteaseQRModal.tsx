@@ -23,10 +23,29 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
   const { toast } = useToast();
   const { refetchAuth } = useAuth();
 
+  const generateQR = async () => {
+    try {
+      setStatus("loading");
+      const response = await authApi.generateNeteaseQR();
+      setQrImage(response.qrImage);
+      setQrKey(response.qrKey);
+      setStatus("ready");
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    } catch (_error) {
+      setStatus("error");
+      toast({
+        title: "Error",
+        description: "Failed to generate QR code",
+        variant: "destructive",
+      });
+    }
+  };
+
   useEffect(() => {
     if (open) {
       generateQR();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   useEffect(() => {
@@ -54,24 +73,8 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
 
       return () => clearInterval(interval);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [qrKey, status]);
-
-  const generateQR = async () => {
-    try {
-      setStatus("loading");
-      const response = await authApi.generateNeteaseQR();
-      setQrImage(response.qrImage);
-      setQrKey(response.qrKey);
-      setStatus("ready");
-    } catch (error) {
-      setStatus("error");
-      toast({
-        title: "Error",
-        description: "Failed to generate QR code",
-        variant: "destructive",
-      });
-    }
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
