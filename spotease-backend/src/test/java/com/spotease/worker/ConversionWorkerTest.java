@@ -1,5 +1,6 @@
 package com.spotease.worker;
 
+import com.spotease.dto.netease.NeteaseTrack;
 import com.spotease.dto.spotify.SpotifyTrack;
 import com.spotease.model.*;
 import com.spotease.repository.ConversionJobRepository;
@@ -163,6 +164,39 @@ class ConversionWorkerTest {
     assertThat(job.getLowConfidenceMatches()).isEqualTo(1);
     assertThat(job.getProcessedTracks()).isEqualTo(1);
 
+    verify(neteaseService, never()).addTracksToPlaylist(any(), any(), any());
+  }
+
+  @Test
+  void shouldSkipExistingTracksInUpdateMode() {
+    // Given
+    job.setMode(ConversionMode.UPDATE);
+    job.setDestinationPlaylistId("existing-playlist-id");
+
+    when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+    when(jobRepository.save(any(ConversionJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(tokenEncryption.decrypt(any())).thenReturn("decrypted-token");
+
+    SpotifyTrack sourceTrack = new SpotifyTrack();
+    sourceTrack.setId("track1");
+    when(spotifyService.getPlaylistTracks(any(), eq("playlist123")))
+        .thenReturn(List.of(sourceTrack));
+
+    // Destination already has track1
+    NeteaseTrack existingTrack = new NeteaseTrack();
+    existingTrack.setId("netease-track1");
+    when(neteaseService.getPlaylistTracks(any(), eq("existing-playlist-id")))
+        .thenReturn(List.of(existingTrack));
+
+    TrackMatch match = new TrackMatch();
+    match.setStatus(MatchStatus.AUTO_MATCHED);
+    match.setDestinationTrackId("netease-track1");
+    when(matchingService.findBestMatch(any(), any(), any(), any())).thenReturn(match);
+
+    // When
+    conversionWorker.processConversionJob(1L);
+
+    // Then
     verify(neteaseService, never()).addTracksToPlaylist(any(), any(), any());
   }
 }

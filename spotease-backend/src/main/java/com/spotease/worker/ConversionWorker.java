@@ -57,6 +57,14 @@ public class ConversionWorker {
       List<?> sourceTracks = getSourceTracks(job, sourceToken);
       log.info("Found {} tracks in source playlist", sourceTracks.size());
 
+      // For UPDATE mode, get existing tracks from destination
+      List<String> existingTrackIds = new ArrayList<>();
+      if (job.getMode() == ConversionMode.UPDATE) {
+        List<?> existingTracks = getDestinationTracks(job, destToken);
+        existingTrackIds = extractTrackIds(existingTracks);
+        log.info("Found {} existing tracks in destination playlist", existingTrackIds.size());
+      }
+
       // Process each track
       List<String> autoMatchedTrackIds = new ArrayList<>();
 
@@ -79,7 +87,14 @@ public class ConversionWorker {
 
         if (match.getStatus() == MatchStatus.AUTO_MATCHED) {
           job.setHighConfidenceMatches(job.getHighConfidenceMatches() + 1);
-          autoMatchedTrackIds.add(match.getDestinationTrackId());
+
+          // Skip if already exists in UPDATE mode
+          if (job.getMode() == ConversionMode.UPDATE &&
+              existingTrackIds.contains(match.getDestinationTrackId())) {
+            log.debug("Track {} already exists in destination, skipping", match.getDestinationTrackId());
+          } else {
+            autoMatchedTrackIds.add(match.getDestinationTrackId());
+          }
         } else if (match.getStatus() == MatchStatus.PENDING_REVIEW) {
           job.setLowConfidenceMatches(job.getLowConfidenceMatches() + 1);
         } else {
@@ -167,5 +182,27 @@ public class ConversionWorker {
     } else {
       neteaseService.addTracksToPlaylist(token, job.getDestinationPlaylistId(), trackIds);
     }
+  }
+
+  private List<?> getDestinationTracks(ConversionJob job, String token) {
+    if (job.getDestinationPlatform() == Platform.SPOTIFY) {
+      return spotifyService.getPlaylistTracks(token, job.getDestinationPlaylistId());
+    } else {
+      return neteaseService.getPlaylistTracks(token, job.getDestinationPlaylistId());
+    }
+  }
+
+  private List<String> extractTrackIds(List<?> tracks) {
+    return tracks.stream()
+        .map(track -> {
+          if (track instanceof com.spotease.dto.spotify.SpotifyTrack) {
+            return ((com.spotease.dto.spotify.SpotifyTrack) track).getId();
+          } else if (track instanceof com.spotease.dto.netease.NeteaseTrack) {
+            return ((com.spotease.dto.netease.NeteaseTrack) track).getId();
+          }
+          return null;
+        })
+        .filter(id -> id != null)
+        .toList();
   }
 }
