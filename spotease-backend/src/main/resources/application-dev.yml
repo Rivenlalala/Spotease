@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/spotease
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+spotease:
+  encryption:
+    key: ${ENCRYPTION_KEY:dev12345678901234567890123456789}
+  spotify:
+    client-id: ${SPOTIFY_CLIENT_ID:changeme}
+    client-secret: ${SPOTIFY_CLIENT_SECRET:changeme}
+    redirect-uri: http://localhost:8080/api/auth/spotify/callback
+  netease:
+    api-url: ${NETEASE_API_URL:https://netease-api.rivenlalala.xyz}
+
+# CORS for local frontend
+cors:
+  allowed-origins: http://localhost:5173
