@@ -92,4 +92,58 @@ public final class StringSimilarity {
 
     return previousRow[len2];
   }
+
+  /**
+   * Normalize string for comparison.
+   *
+   * <p>Performs the following transformations:
+   * <ul>
+   *   <li>Convert to lowercase</li>
+   *   <li>Trim leading/trailing whitespace</li>
+   *   <li>Remove special characters (.,!?;:()"'-)</li>
+   *   <li>Normalize featuring variants ("featuring", "ft.", "feat.") to "feat"</li>
+   *   <li>Collapse multiple spaces to single space</li>
+   * </ul>
+   *
+   * <p>Null inputs are treated as empty strings.
+   *
+   * @param input string to normalize (null treated as empty string)
+   * @return normalized string (empty if input was null/empty/whitespace)
+   */
+  public static String normalize(String input) {
+    if (input == null || input.trim().isEmpty()) {
+      return "";
+    }
+
+    String result = input.toLowerCase().trim();
+
+    // Normalize featuring variants first (before removing special chars)
+    result = normalizeFeaturing(result);
+
+    // Remove special characters and collapse whitespace
+    result = removeSpecialChars(result);
+
+    return result;
+  }
+
+  /**
+   * Normalize featuring variants to standard "feat"
+   */
+  private static String normalizeFeaturing(String input) {
+    return input
+        .replaceAll("\\bfeaturing\\b", "feat")
+        .replaceAll("\\bft\\.", "feat")
+        .replaceAll("\\bfeat\\.", "feat");
+  }
+
+  /**
+   * Remove special characters and collapse whitespace
+   */
+  private static String removeSpecialChars(String input) {
+    // Remove: . , ! ? ; : ( ) " ' -
+    return input
+        .replaceAll("[.,!?;:()\"'\\-]", " ")
+        .replaceAll("\\s+", " ")
+        .trim();
+  }
 }

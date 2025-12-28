@@ -64,4 +64,29 @@ class StringSimilarityTest {
         "Smells Like Teen Spirit"
     )).isEqualTo(19);
   }
+
+  @Test
+  void testNormalization() {
+    assertThat(StringSimilarity.normalize("Ed Sheeran (feat. Taylor Swift)"))
+        .isEqualTo("ed sheeran feat taylor swift");
+
+    assertThat(StringSimilarity.normalize("Shape Of You!!!"))
+        .isEqualTo("shape of you");
+
+    assertThat(StringSimilarity.normalize("Panic! At The Disco"))
+        .isEqualTo("panic at the disco");
+
+    assertThat(StringSimilarity.normalize("Artist ft. Someone"))
+        .isEqualTo("artist feat someone");
+
+    assertThat(StringSimilarity.normalize("Song featuring Artist"))
+        .isEqualTo("song feat artist");
+  }
+
+  @Test
+  void testNormalizationEdgeCases() {
+    assertThat(StringSimilarity.normalize(null)).isEqualTo("");
+    assertThat(StringSimilarity.normalize("")).isEqualTo("");
+    assertThat(StringSimilarity.normalize("   ")).isEqualTo("");
+  }
 }
