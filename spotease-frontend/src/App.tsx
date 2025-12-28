@@ -1,9 +1,14 @@
+import { RouterProvider } from 'react-router-dom';
+import { router } from './routes';
+import { Toaster } from '@/components/ui/toaster';
+
 function App() {
   return (
-    <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-      <h1 className="text-4xl font-bold text-blue-600">Spotease</h1>
-    </div>
-  )
+    <>
+      <RouterProvider router={router} />
+      <Toaster />
+    </>
+  );
 }
 
-export default App
+export default App;
