@@ -111,4 +111,84 @@ class MatchingServiceTest {
 
     return track;
   }
+
+  @Test
+  void shouldScorePerfectMatch() {
+    // Identical track
+    SpotifyTrack source = createSpotifyTrack("1", "Shape of You", List.of("Ed Sheeran"), 240000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Shape of You", List.of("Ed Sheeran"), 240000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    assertThat(result.getMatchConfidence()).isGreaterThan(0.95);
+    assertThat(result.getStatus()).isEqualTo(MatchStatus.AUTO_MATCHED);
+  }
+
+  @Test
+  void shouldScoreHighConfidenceMatch() {
+    // Slightly different name but same artist and duration
+    SpotifyTrack source = createSpotifyTrack("1", "Shape of You", List.of("Ed Sheeran"), 240000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Shape Of You", List.of("Ed Sheeran"), 241000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    assertThat(result.getMatchConfidence()).isGreaterThanOrEqualTo(0.85);
+    assertThat(result.getStatus()).isEqualTo(MatchStatus.AUTO_MATCHED);
+  }
+
+  @Test
+  void shouldScoreMediumConfidenceMatch() {
+    // Different duration, slightly different name
+    SpotifyTrack source = createSpotifyTrack("1", "Bohemian Rhapsody", List.of("Queen"), 354000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Bohemian Rhapsody - Remastered", List.of("Queen"), 360000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    assertThat(result.getMatchConfidence()).isBetween(0.60, 0.84);
+    assertThat(result.getStatus()).isEqualTo(MatchStatus.PENDING_REVIEW);
+  }
+
+  @Test
+  void shouldScoreLowConfidenceMatch() {
+    // Different artist (cover version)
+    SpotifyTrack source = createSpotifyTrack("1", "Bohemian Rhapsody", List.of("Queen"), 354000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Bohemian Rhapsody", List.of("Panic! at the Disco"), 320000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    assertThat(result.getMatchConfidence()).isLessThan(0.60);
+    assertThat(result.getStatus()).isEqualTo(MatchStatus.FAILED);
+  }
+
+  @Test
+  void shouldScoreArtistNamesSimilarity() {
+    // Test artist scoring specifically
+    // Same track name and duration, but different artist names
+    SpotifyTrack source = createSpotifyTrack("1", "Yesterday", List.of("The Beatles"), 125000);
+    NeteaseTrack perfectArtist = createNeteaseTrack("1", "Yesterday", List.of("The Beatles"), 125000);
+    NeteaseTrack similarArtist = createNeteaseTrack("2", "Yesterday", List.of("Beatles"), 125000);
+    NeteaseTrack differentArtist = createNeteaseTrack("3", "Yesterday", List.of("John Lennon"), 125000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(perfectArtist));
+    TrackMatch perfectResult = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(similarArtist));
+    TrackMatch similarResult = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(differentArtist));
+    TrackMatch differentResult = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    // Perfect artist match should score highest
+    assertThat(perfectResult.getMatchConfidence()).isGreaterThan(similarResult.getMatchConfidence());
+    // Similar artist should score higher than different artist
+    assertThat(similarResult.getMatchConfidence()).isGreaterThan(differentResult.getMatchConfidence());
+  }
 }

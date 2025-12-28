@@ -246,8 +246,22 @@ public class MatchingService {
   }
 
   private double scoreArtists(List<String> sourceArtists, List<String> candidateArtists) {
-    // TODO: implement with StringSimilarity (will be done in Task 6)
-    return 1.0;  // Temporary
+    if (sourceArtists.isEmpty() || candidateArtists.isEmpty()) {
+      return 0.0;
+    }
+
+    double totalSimilarity = 0.0;
+
+    for (String sourceArtist : sourceArtists) {
+      double bestMatch = 0.0;
+      for (String candidateArtist : candidateArtists) {
+        double similarity = StringSimilarity.calculateSimilarity(sourceArtist, candidateArtist);
+        bestMatch = Math.max(bestMatch, similarity);
+      }
+      totalSimilarity += bestMatch;
+    }
+
+    return totalSimilarity / sourceArtists.size();
   }
 
   private MatchStatus determineStatus(double score) {
