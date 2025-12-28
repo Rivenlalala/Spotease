@@ -60,12 +60,55 @@ class MatchingServiceTest {
     assertThat(result.getDestinationTrackId()).isNull();
   }
 
+  @Test
+  void shouldScoreDurationCorrectly() {
+    // Perfect match (≤3 seconds)
+    SpotifyTrack source1 = createSpotifyTrack("1", "Test", List.of("Artist"), 240000);
+    NeteaseTrack candidate1 = createNeteaseTrack("1", "Test", List.of("Artist"), 242000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate1));
+
+    TrackMatch result1 = matchingService.findBestMatch(source1, Platform.NETEASE, "token", job);
+
+    // Should get high score due to perfect duration match
+    assertThat(result1.getMatchConfidence()).isGreaterThan(0.8);
+
+    // Large difference (>10 seconds)
+    SpotifyTrack source2 = createSpotifyTrack("2", "Test", List.of("Artist"), 240000);
+    NeteaseTrack candidate2 = createNeteaseTrack("2", "Test", List.of("Artist"), 260000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate2));
+
+    TrackMatch result2 = matchingService.findBestMatch(source2, Platform.NETEASE, "token", job);
+
+    // Should get lower score due to duration mismatch
+    assertThat(result2.getMatchConfidence()).isLessThan(result1.getMatchConfidence());
+  }
+
   private SpotifyTrack createSpotifyTrack(String id, String name, List<String> artists, Integer durationMs) {
     SpotifyTrack track = new SpotifyTrack();
     track.setId(id);
     track.setName(name);
     track.setArtists(artists);
     track.setDurationMs(durationMs);
+    return track;
+  }
+
+  private NeteaseTrack createNeteaseTrack(String id, String name, List<String> artistNames, Integer durationMs) {
+    NeteaseTrack track = new NeteaseTrack();
+    track.setId(id);
+    track.setName(name);
+
+    List<NeteaseTrack.NeteaseArtist> artists = artistNames.stream()
+        .map(artistName -> {
+          NeteaseTrack.NeteaseArtist artist = new NeteaseTrack.NeteaseArtist();
+          artist.setName(artistName);
+          return artist;
+        })
+        .toList();
+    track.setArtists(artists);
+    track.setDuration(durationMs);
+
     return track;
   }
 }

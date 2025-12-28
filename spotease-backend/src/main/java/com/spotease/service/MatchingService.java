@@ -6,6 +6,7 @@ import com.spotease.model.ConversionJob;
 import com.spotease.model.MatchStatus;
 import com.spotease.model.Platform;
 import com.spotease.model.TrackMatch;
+import com.spotease.util.StringSimilarity;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -16,6 +17,9 @@ import java.util.List;
 @RequiredArgsConstructor
 @Slf4j
 public class MatchingService {
+
+  private static final double AUTO_MATCH_THRESHOLD = 0.85;
+  private static final double REVIEW_THRESHOLD = 0.60;
 
   private final SpotifyService spotifyService;
   private final NeteaseService neteaseService;
@@ -51,8 +55,24 @@ public class MatchingService {
       return createFailedMatch(sourceTrackId, job);
     }
 
-    // TODO: Implement scoring logic in next task
-    return createFailedMatch(sourceTrackId, job);
+    // Score all candidates and select best
+    double bestScore = 0.0;
+    Object bestCandidate = null;
+
+    for (Object candidate : searchResults) {
+      double score = scoreCandidate(sourceTrack, candidate);
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = candidate;
+      }
+    }
+
+    // Determine status based on score
+    MatchStatus status = determineStatus(bestScore);
+
+    log.info("Match found with confidence {}: {}", bestScore, getTrackName(bestCandidate));
+
+    return createTrackMatch(job, sourceTrack, bestCandidate, bestScore, status);
   }
 
   /**
@@ -166,5 +186,124 @@ public class MatchingService {
     }
     // NetEase doesn't provide ISRC
     return null;
+  }
+
+  private double scoreCandidate(Object source, Object candidate) {
+    double totalScore = 0.0;
+    double totalWeight = 0.0;
+
+    // Duration score (60% weight if present)
+    Integer sourceDuration = getDurationMs(source);
+    Integer candidateDuration = getDurationMs(candidate);
+    if (sourceDuration != null && candidateDuration != null) {
+      double durationScore = scoreDuration(sourceDuration, candidateDuration);
+      totalScore += durationScore * 0.6;
+      totalWeight += 0.6;
+      log.debug("Duration score: {}", durationScore);
+    }
+
+    // Track name score (20% weight, always required)
+    String sourceName = getTrackName(source);
+    String candidateName = getTrackName(candidate);
+    double nameScore = scoreTrackName(sourceName, candidateName);
+    totalScore += nameScore * 0.2;
+    totalWeight += 0.2;
+    log.debug("Track name score: {}", nameScore);
+
+    // Artist score (20% weight if present)
+    List<String> sourceArtists = getArtistNames(source);
+    List<String> candidateArtists = getArtistNames(candidate);
+    if (!sourceArtists.isEmpty() && !candidateArtists.isEmpty()) {
+      double artistScore = scoreArtists(sourceArtists, candidateArtists);
+      totalScore += artistScore * 0.2;
+      totalWeight += 0.2;
+      log.debug("Artist score: {}", artistScore);
+    }
+
+    // Normalize to 0.0-1.0 range
+    double finalScore = totalWeight > 0 ? totalScore / totalWeight : 0.0;
+    log.debug("Final score: {}", finalScore);
+
+    return finalScore;
+  }
+
+  private double scoreDuration(Integer sourceMs, Integer candidateMs) {
+    int sourceSec = sourceMs / 1000;
+    int candidateSec = candidateMs / 1000;
+    int diff = Math.abs(sourceSec - candidateSec);
+
+    if (diff <= 3) {
+      return 1.0;
+    } else if (diff <= 10) {
+      return 1.0 - ((diff - 3) / 7.0);
+    } else {
+      return 0.0;
+    }
+  }
+
+  private double scoreTrackName(String source, String candidate) {
+    return StringSimilarity.calculateSimilarity(source, candidate);
+  }
+
+  private double scoreArtists(List<String> sourceArtists, List<String> candidateArtists) {
+    // TODO: implement with StringSimilarity (will be done in Task 6)
+    return 1.0;  // Temporary
+  }
+
+  private MatchStatus determineStatus(double score) {
+    if (score >= AUTO_MATCH_THRESHOLD) {
+      return MatchStatus.AUTO_MATCHED;
+    } else if (score >= REVIEW_THRESHOLD) {
+      return MatchStatus.PENDING_REVIEW;
+    } else {
+      return MatchStatus.FAILED;
+    }
+  }
+
+  private TrackMatch createTrackMatch(
+      ConversionJob job,
+      Object sourceTrack,
+      Object destinationTrack,
+      double score,
+      MatchStatus status) {
+
+    TrackMatch match = new TrackMatch();
+    match.setConversionJob(job);
+
+    // Source track info
+    match.setSourceTrackId(getTrackId(sourceTrack));
+    match.setSourceTrackName(getTrackName(sourceTrack));
+    match.setSourceArtist(getFirstArtist(sourceTrack));
+    match.setSourceAlbum(getAlbumName(sourceTrack));
+    match.setSourceDuration(getDurationInSeconds(sourceTrack));
+    match.setSourceISRC(getIsrc(sourceTrack));
+
+    // Destination track info
+    match.setDestinationTrackId(getTrackId(destinationTrack));
+    match.setDestinationTrackName(getTrackName(destinationTrack));
+    match.setDestinationArtist(getFirstArtist(destinationTrack));
+
+    // Match metadata
+    match.setMatchConfidence(score);
+    match.setStatus(status);
+
+    if (status == MatchStatus.AUTO_MATCHED) {
+      match.setAppliedAt(java.time.LocalDateTime.now());
+    }
+
+    return match;
+  }
+
+  private List<String> getArtistNames(Object track) {
+    if (track instanceof SpotifyTrack) {
+      List<String> artists = ((SpotifyTrack) track).getArtists();
+      return artists != null ? artists : List.of();
+    } else if (track instanceof NeteaseTrack) {
+      List<NeteaseTrack.NeteaseArtist> artists = ((NeteaseTrack) track).getArtists();
+      return artists != null
+          ? artists.stream().map(NeteaseTrack.NeteaseArtist::getName).toList()
+          : List.of();
+    }
+    return List.of();
   }
 }
