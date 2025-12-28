@@ -8,7 +8,6 @@ import com.spotease.model.TrackMatch;
 import com.spotease.model.User;
 import com.spotease.repository.ConversionJobRepository;
 import com.spotease.repository.TrackMatchRepository;
-import com.spotease.repository.UserRepository;
 import com.spotease.service.NeteaseService;
 import com.spotease.service.SpotifyService;
 import com.spotease.util.TokenEncryption;
@@ -17,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -31,7 +31,6 @@ public class ReviewController {
 
   private final ConversionJobRepository jobRepository;
   private final TrackMatchRepository matchRepository;
-  private final UserRepository userRepository;
   private final SpotifyService spotifyService;
   private final NeteaseService neteaseService;
   private final TokenEncryption tokenEncryption;
@@ -51,40 +50,48 @@ public class ReviewController {
 
     log.info("Fetching pending matches for job {} by user {}", jobId, userId);
 
-    // Fetch job
-    ConversionJob job = jobRepository.findById(jobId).orElse(null);
-    if (job == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    try {
+      // Fetch job
+      ConversionJob job = jobRepository.findById(jobId).orElse(null);
+      if (job == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+      }
+
+      // Verify ownership
+      if (!job.getUser().getId().equals(userId)) {
+        log.warn("User {} attempted to access job {} owned by user {}",
+            userId, jobId, job.getUser().getId());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+
+      // Get pending and failed matches in a single query
+      List<TrackMatch> allMatches = matchRepository.findByConversionJob_IdAndStatusIn(
+          jobId,
+          List.of(MatchStatus.PENDING_REVIEW, MatchStatus.FAILED)
+      );
+
+      // Map to DTOs
+      List<TrackMatchDto> matchDtos = allMatches.stream()
+          .map(this::mapToDto)
+          .collect(Collectors.toList());
+
+      log.info("Found {} pending/failed matches for job {}", matchDtos.size(), jobId);
+      return ResponseEntity.ok(matchDtos);
+
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid request for getting pending matches for job {}: {}", jobId, e.getMessage());
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    } catch (Exception e) {
+      log.error("Failed to get pending matches for job {}: {}", jobId, e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
-
-    // Verify ownership
-    if (!job.getUser().getId().equals(userId)) {
-      log.warn("User {} attempted to access job {} owned by user {}",
-          userId, jobId, job.getUser().getId());
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-
-    // Get pending and failed matches
-    List<TrackMatch> pendingMatches = matchRepository.findByConversionJob_IdAndStatus(jobId, MatchStatus.PENDING_REVIEW);
-    List<TrackMatch> failedMatches = matchRepository.findByConversionJob_IdAndStatus(jobId, MatchStatus.FAILED);
-
-    // Combine and map to DTOs
-    List<TrackMatchDto> allMatches = pendingMatches.stream()
-        .map(this::mapToDto)
-        .collect(Collectors.toList());
-
-    allMatches.addAll(failedMatches.stream()
-        .map(this::mapToDto)
-        .collect(Collectors.toList()));
-
-    log.info("Found {} pending/failed matches for job {}", allMatches.size(), jobId);
-    return ResponseEntity.ok(allMatches);
   }
 
   /**
    * Approve a match and add the track to the destination playlist
    */
   @PostMapping("/{matchId}/approve")
+  @Transactional
   public ResponseEntity<Void> approveMatch(
       @PathVariable Long jobId,
       @PathVariable Long matchId,
@@ -129,11 +136,8 @@ public class ReviewController {
     }
 
     try {
-      // Get user
-      User user = userRepository.findById(userId).orElse(null);
-      if (user == null) {
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
-      }
+      // Get user from job
+      User user = job.getUser();
 
       // Add track to destination playlist
       addTrackToPlaylist(job, match, user);
@@ -147,6 +151,9 @@ public class ReviewController {
       log.info("Successfully approved match {} and added track to playlist", matchId);
       return ResponseEntity.ok().build();
 
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid request for approving match {}: {}", matchId, e.getMessage());
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     } catch (Exception e) {
       log.error("Failed to approve match {}: {}", matchId, e.getMessage(), e);
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
@@ -169,38 +176,47 @@ public class ReviewController {
 
     log.info("Skipping match {} for job {} by user {}", matchId, jobId, userId);
 
-    // Fetch job
-    ConversionJob job = jobRepository.findById(jobId).orElse(null);
-    if (job == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
+    try {
+      // Fetch job
+      ConversionJob job = jobRepository.findById(jobId).orElse(null);
+      if (job == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+      }
 
-    // Verify ownership
-    if (!job.getUser().getId().equals(userId)) {
-      log.warn("User {} attempted to skip match in job {} owned by user {}",
-          userId, jobId, job.getUser().getId());
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
+      // Verify ownership
+      if (!job.getUser().getId().equals(userId)) {
+        log.warn("User {} attempted to skip match in job {} owned by user {}",
+            userId, jobId, job.getUser().getId());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
 
-    // Fetch match
-    TrackMatch match = matchRepository.findById(matchId).orElse(null);
-    if (match == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
+      // Fetch match
+      TrackMatch match = matchRepository.findById(matchId).orElse(null);
+      if (match == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+      }
 
-    // Verify match belongs to job
-    if (!match.getConversionJob().getId().equals(jobId)) {
-      log.warn("Match {} does not belong to job {}", matchId, jobId);
+      // Verify match belongs to job
+      if (!match.getConversionJob().getId().equals(jobId)) {
+        log.warn("Match {} does not belong to job {}", matchId, jobId);
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+      }
+
+      // Update match status
+      match.setStatus(MatchStatus.USER_SKIPPED);
+      match.setReviewedAt(LocalDateTime.now());
+      matchRepository.save(match);
+
+      log.info("Successfully skipped match {}", matchId);
+      return ResponseEntity.ok().build();
+
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid request for skipping match {}: {}", matchId, e.getMessage());
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    } catch (Exception e) {
+      log.error("Failed to skip match {}: {}", matchId, e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
     }
-
-    // Update match status
-    match.setStatus(MatchStatus.USER_SKIPPED);
-    match.setReviewedAt(LocalDateTime.now());
-    matchRepository.save(match);
-
-    log.info("Successfully skipped match {}", matchId);
-    return ResponseEntity.ok().build();
   }
 
   /**
