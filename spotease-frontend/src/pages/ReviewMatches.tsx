@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { conversionsApi } from '@/api/conversions';
@@ -7,7 +7,6 @@ import TrackMatchCard from '@/components/conversions/TrackMatchCard';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft } from 'lucide-react';
-import { TrackMatch } from '@/types/track';
 
 const ReviewMatches = () => {
   const { jobId } = useParams<{ jobId: string }>();
