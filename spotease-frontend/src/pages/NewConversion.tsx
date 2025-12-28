@@ -51,7 +51,8 @@ const NewConversion = () => {
   // Create conversion mutation
   const createConversionMutation = useMutation({
     mutationFn: conversionsApi.createConversion,
-    onSuccess: (job) => {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    onSuccess: (_job) => {
       toast({
         title: 'Conversion started',
         description: 'Your playlist conversion is now in progress',
