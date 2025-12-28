@@ -140,4 +140,31 @@ public class MatchingService {
     }
     throw new IllegalArgumentException("Unsupported track type: " + track.getClass().getName());
   }
+
+  private String getAlbumName(Object track) {
+    if (track instanceof SpotifyTrack) {
+      return ((SpotifyTrack) track).getAlbum();
+    } else if (track instanceof NeteaseTrack) {
+      NeteaseTrack.NeteaseAlbum album = ((NeteaseTrack) track).getAlbum();
+      return album != null ? album.getName() : null;
+    }
+    return null;
+  }
+
+  private Integer getDurationMs(Object track) {
+    if (track instanceof SpotifyTrack) {
+      return ((SpotifyTrack) track).getDurationMs();
+    } else if (track instanceof NeteaseTrack) {
+      return ((NeteaseTrack) track).getDuration();
+    }
+    return null;
+  }
+
+  private String getIsrc(Object track) {
+    if (track instanceof SpotifyTrack) {
+      return ((SpotifyTrack) track).getIsrc();
+    }
+    // NetEase doesn't provide ISRC
+    return null;
+  }
 }
