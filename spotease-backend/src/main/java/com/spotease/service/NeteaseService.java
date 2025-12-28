@@ -124,7 +124,7 @@ public class NeteaseService {
               .path("/cloudsearch")
               .queryParam("keywords", query)
               .queryParam("type", 1)  // 1 = single track
-              .queryParam("limit", 10)
+              .queryParam("limit", 5)
               .build())
           .header("Cookie", "MUSIC_U=" + cookie)
           .retrieve()

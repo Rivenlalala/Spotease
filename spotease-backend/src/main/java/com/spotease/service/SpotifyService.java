@@ -86,7 +86,7 @@ public class SpotifyService {
 
       SearchTracksRequest searchTracksRequest = authenticatedApi
           .searchTracks(query)
-          .limit(10)
+          .limit(5)
           .build();
 
       Paging<Track> trackPaging = searchTracksRequest.execute();
