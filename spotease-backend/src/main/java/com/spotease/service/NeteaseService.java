@@ -3,6 +3,7 @@ package com.spotease.service;
 import com.spotease.dto.netease.NeteasePlaylist;
 import com.spotease.dto.netease.NeteaseResponse;
 import com.spotease.dto.netease.NeteaseTrack;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
@@ -22,38 +23,61 @@ public class NeteaseService {
   @Value("${spotease.netease.api-url}")
   private String neteaseApiUrl;
 
-  private WebClient getWebClient(String cookie) {
-    return webClientBuilder
+  private WebClient webClient;
+
+  @PostConstruct
+  public void init() {
+    this.webClient = webClientBuilder
         .baseUrl(neteaseApiUrl)
-        .defaultHeader("Cookie", "MUSIC_U=" + cookie)
         .build();
   }
 
   public List<NeteasePlaylist> getPlaylists(String cookie) {
     try {
       // Get user account to get userId
-      NeteaseResponse<Void> accountResponse = getWebClient(cookie)
+      NeteaseResponse<Void> accountResponse = webClient
           .get()
           .uri("/user/account")
+          .header("Cookie", "MUSIC_U=" + cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
 
+      // Validate account response
+      if (accountResponse == null) {
+        throw new RuntimeException("Account response is null");
+      }
+      if (accountResponse.getCode() != 200) {
+        throw new RuntimeException("NetEase API returned error code: " + accountResponse.getCode());
+      }
+      if (accountResponse.getProfile() == null) {
+        throw new RuntimeException("Account profile is null");
+      }
+
       Long userId = accountResponse.getProfile().getUserId();
 
       // Get user playlists
-      NeteaseResponse<Void> playlistResponse = getWebClient(cookie)
+      NeteaseResponse<Void> playlistResponse = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/user/playlist")
               .queryParam("uid", userId)
               .queryParam("limit", 100)
               .build())
+          .header("Cookie", "MUSIC_U=" + cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
+
+      // Validate playlist response
+      if (playlistResponse == null) {
+        throw new RuntimeException("Playlist response is null");
+      }
+      if (playlistResponse.getCode() != 200) {
+        throw new RuntimeException("NetEase API returned error code: " + playlistResponse.getCode());
+      }
 
       return playlistResponse.getPlaylist();
     } catch (Exception e) {
@@ -63,16 +87,25 @@ public class NeteaseService {
 
   public List<NeteaseTrack> getPlaylistTracks(String cookie, String playlistId) {
     try {
-      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = getWebClient(cookie)
+      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/playlist/detail")
               .queryParam("id", playlistId)
               .build())
+          .header("Cookie", "MUSIC_U=" + cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
+
+      // Validate response
+      if (response == null) {
+        throw new RuntimeException("Playlist tracks response is null");
+      }
+      if (response.getCode() != 200) {
+        throw new RuntimeException("NetEase API returned error code: " + response.getCode());
+      }
 
       // Response has {playlist: {tracks: [...]}}
       return response.getData() != null && response.getData().getPlaylist() != null
@@ -85,7 +118,7 @@ public class NeteaseService {
 
   public List<NeteaseTrack> searchTrack(String cookie, String query) {
     try {
-      NeteaseResponse<Void> response = getWebClient(cookie)
+      NeteaseResponse<Void> response = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/cloudsearch")
@@ -93,10 +126,19 @@ public class NeteaseService {
               .queryParam("type", 1)  // 1 = single track
               .queryParam("limit", 10)
               .build())
+          .header("Cookie", "MUSIC_U=" + cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
+
+      // Validate response
+      if (response == null) {
+        throw new RuntimeException("Search response is null");
+      }
+      if (response.getCode() != 200) {
+        throw new RuntimeException("NetEase API returned error code: " + response.getCode());
+      }
 
       return response.getResult() != null ? response.getResult().getSongs() : List.of();
     } catch (Exception e) {
@@ -108,7 +150,7 @@ public class NeteaseService {
     try {
       String trackIdsParam = String.join(",", trackIds);
 
-      getWebClient(cookie)
+      NeteaseResponse<Void> response = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/playlist/tracks")
@@ -116,10 +158,19 @@ public class NeteaseService {
               .queryParam("pid", playlistId)
               .queryParam("tracks", trackIdsParam)
               .build())
+          .header("Cookie", "MUSIC_U=" + cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
+
+      // Validate response
+      if (response == null) {
+        throw new RuntimeException("Add tracks response is null");
+      }
+      if (response.getCode() != 200) {
+        throw new RuntimeException("NetEase API returned error code: " + response.getCode());
+      }
     } catch (Exception e) {
       throw new RuntimeException("Failed to add tracks to playlist", e);
     }
