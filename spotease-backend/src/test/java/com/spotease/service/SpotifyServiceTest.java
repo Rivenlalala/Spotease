@@ -5,8 +5,8 @@ import com.spotease.dto.spotify.SpotifyTrack;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.model_objects.miscellaneous.PlaylistTracksInformation;
@@ -27,8 +27,17 @@ class SpotifyServiceTest {
   @Mock
   private SpotifyApi spotifyApi;
 
-  @InjectMocks
-  private SpotifyService spotifyService;
+  @Mock
+  private SpotifyApi authenticatedApi;
+
+  @Spy
+  private SpotifyService spotifyService = new SpotifyService(spotifyApi);
+
+  @BeforeEach
+  void setUp() {
+    // Mock the createAuthenticatedApi method to return our mock
+    doReturn(authenticatedApi).when(spotifyService).createAuthenticatedApi(anyString());
+  }
 
   @Test
   void shouldGetPlaylists() throws Exception {
@@ -52,7 +61,7 @@ class SpotifyServiceTest {
     when(mockBuilder.limit(50)).thenReturn(mockBuilder);
     when(mockBuilder.build()).thenReturn(mockRequest);
 
-    when(spotifyApi.getListOfCurrentUsersPlaylists()).thenReturn(mockBuilder);
+    when(authenticatedApi.getListOfCurrentUsersPlaylists()).thenReturn(mockBuilder);
 
     // When
     List<SpotifyPlaylist> result = spotifyService.getPlaylists("test-token");
@@ -90,7 +99,7 @@ class SpotifyServiceTest {
     when(mockBuilder.limit(10)).thenReturn(mockBuilder);
     when(mockBuilder.build()).thenReturn(mockRequest);
 
-    when(spotifyApi.searchTracks(anyString())).thenReturn(mockBuilder);
+    when(authenticatedApi.searchTracks(anyString())).thenReturn(mockBuilder);
 
     // When
     List<SpotifyTrack> result = spotifyService.searchTrack("test-token", "test query");

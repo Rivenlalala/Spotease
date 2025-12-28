@@ -24,11 +24,27 @@ public class SpotifyService {
 
   private final SpotifyApi spotifyApi;
 
+  /**
+   * Creates a new SpotifyApi instance with the provided access token.
+   * This ensures thread-safety by avoiding mutation of the singleton bean.
+   *
+   * @param accessToken the user's access token
+   * @return a new SpotifyApi instance configured with the access token
+   */
+  protected SpotifyApi createAuthenticatedApi(String accessToken) {
+    return new SpotifyApi.Builder()
+        .setClientId(spotifyApi.getClientId())
+        .setClientSecret(spotifyApi.getClientSecret())
+        .setRedirectUri(spotifyApi.getRedirectURI())
+        .setAccessToken(accessToken)
+        .build();
+  }
+
   public List<SpotifyPlaylist> getPlaylists(String accessToken) {
     try {
-      spotifyApi.setAccessToken(accessToken);
+      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      GetListOfCurrentUsersPlaylistsRequest getPlaylistsRequest = spotifyApi
+      GetListOfCurrentUsersPlaylistsRequest getPlaylistsRequest = authenticatedApi
           .getListOfCurrentUsersPlaylists()
           .limit(50)
           .build();
@@ -45,9 +61,9 @@ public class SpotifyService {
 
   public List<SpotifyTrack> getPlaylistTracks(String accessToken, String playlistId) {
     try {
-      spotifyApi.setAccessToken(accessToken);
+      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      GetPlaylistsItemsRequest getPlaylistItemsRequest = spotifyApi
+      GetPlaylistsItemsRequest getPlaylistItemsRequest = authenticatedApi
           .getPlaylistsItems(playlistId)
           .limit(100)
           .build();
@@ -66,9 +82,9 @@ public class SpotifyService {
 
   public List<SpotifyTrack> searchTrack(String accessToken, String query) {
     try {
-      spotifyApi.setAccessToken(accessToken);
+      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      SearchTracksRequest searchTracksRequest = spotifyApi
+      SearchTracksRequest searchTracksRequest = authenticatedApi
           .searchTracks(query)
           .limit(10)
           .build();
@@ -85,9 +101,9 @@ public class SpotifyService {
 
   public void addTracksToPlaylist(String accessToken, String playlistId, List<String> trackUris) {
     try {
-      spotifyApi.setAccessToken(accessToken);
+      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      AddItemsToPlaylistRequest addItemsRequest = spotifyApi
+      AddItemsToPlaylistRequest addItemsRequest = authenticatedApi
           .addItemsToPlaylist(playlistId, trackUris.toArray(new String[0]))
           .build();
 
