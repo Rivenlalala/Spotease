@@ -1,0 +1,25 @@
+# Build artifacts
+target/
+*.class
+
+# IDE files
+.idea/
+.vscode/
+*.iml
+.settings/
+.project
+.classpath
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test coverage
+coverage/
+
+# Environment files
+.env
+.env.local
