@@ -127,11 +127,44 @@ This project uses Hibernate auto-DDL (development only). For production, conside
   - Search tracks
   - Add tracks to playlist
 
+### Track Matching Algorithm
+
+**MatchingService** implements intelligent track matching between Spotify and NetEase Music:
+
+**Features:**
+- Multi-factor scoring: Duration (60%), Track name (20%), Artist (20%)
+- Dynamic weight rebalancing when data is missing
+- 3-tier search fallback strategy for maximum match rate
+- Confidence-based thresholds:
+  - AUTO_MATCHED (≥0.85): Automatically added to destination playlist
+  - PENDING_REVIEW (0.60-0.84): Requires user review
+  - FAILED (<0.60): No confident match found
+
+**String Similarity:**
+- Levenshtein distance algorithm for string comparison
+- Normalization: lowercase, remove special chars, normalize "feat"/"ft."
+- Handles artist name variations and track title differences
+
+**Search Strategy:**
+- Tier 1: `"{track name}" {first artist}` (quoted search)
+- Tier 2: `{track name} {first artist}` (unquoted search)
+- Tier 3: `{track name}` (name only, fallback)
+
+**Usage:**
+```java
+TrackMatch match = matchingService.findBestMatch(
+    sourceTrack,           // SpotifyTrack or NeteaseTrack
+    Platform.NETEASE,      // Destination platform
+    "access-token",        // Platform access token
+    conversionJob          // ConversionJob entity
+);
+```
+
 **TODO:**
 - ⏳ NetEase QR authentication implementation
 - ⏳ Playlist endpoints
 - ⏳ Conversion job endpoints
-- ⏳ Track matching service
+- ✅ Track matching service
 - ⏳ Background worker implementation
 - ⏳ WebSocket configuration
 - ⏳ Review endpoints
