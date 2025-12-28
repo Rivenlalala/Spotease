@@ -11,6 +11,7 @@ import se.michaelthelin.spotify.model_objects.specification.PlaylistTrack;
 import se.michaelthelin.spotify.model_objects.specification.Track;
 import se.michaelthelin.spotify.requests.data.playlists.AddItemsToPlaylistRequest;
 import se.michaelthelin.spotify.requests.data.playlists.GetListOfCurrentUsersPlaylistsRequest;
+import se.michaelthelin.spotify.requests.data.playlists.GetPlaylistRequest;
 import se.michaelthelin.spotify.requests.data.playlists.GetPlaylistsItemsRequest;
 import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequest;
 
@@ -56,6 +57,27 @@ public class SpotifyService {
           .collect(Collectors.toList());
     } catch (Exception e) {
       throw new RuntimeException("Failed to get Spotify playlists", e);
+    }
+  }
+
+  public SpotifyPlaylist getPlaylistById(String accessToken, String playlistId) {
+    try {
+      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+
+      GetPlaylistRequest getPlaylistRequest = authenticatedApi
+          .getPlaylist(playlistId)
+          .build();
+
+      se.michaelthelin.spotify.model_objects.specification.Playlist playlist = getPlaylistRequest.execute();
+
+      SpotifyPlaylist dto = new SpotifyPlaylist();
+      dto.setId(playlist.getId());
+      dto.setName(playlist.getName());
+      dto.setDescription(playlist.getDescription());
+      dto.setTrackCount(playlist.getTracks().getTotal());
+      return dto;
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to get Spotify playlist", e);
     }
   }
 

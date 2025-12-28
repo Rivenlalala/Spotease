@@ -85,6 +85,46 @@ public class NeteaseService {
     }
   }
 
+  public NeteasePlaylist getPlaylistById(String cookie, String playlistId) {
+    try {
+      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = webClient
+          .get()
+          .uri(uriBuilder -> uriBuilder
+              .path("/playlist/detail")
+              .queryParam("id", playlistId)
+              .build())
+          .header("Cookie", "MUSIC_U=" + cookie)
+          .retrieve()
+          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {})
+          .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+          .block();
+
+      // Validate response
+      if (response == null) {
+        throw new RuntimeException("Playlist response is null");
+      }
+      if (response.getCode() != 200) {
+        throw new RuntimeException("NetEase API returned error code: " + response.getCode());
+      }
+      if (response.getData() == null || response.getData().getPlaylist() == null) {
+        throw new RuntimeException("Playlist data is null");
+      }
+
+      // Map to NeteasePlaylist DTO
+      NeteaseResponse.NeteasePlaylistDetail playlistDetail = response.getData().getPlaylist();
+      NeteasePlaylist dto = new NeteasePlaylist();
+      dto.setId(playlistDetail.getId());
+      dto.setName(playlistDetail.getName());
+      dto.setDescription(playlistDetail.getDescription());
+      dto.setTrackCount(playlistDetail.getTracks() != null ? playlistDetail.getTracks().size() : 0);
+      dto.setCoverImgUrl(playlistDetail.getCoverImgUrl());
+      dto.setUserId(playlistDetail.getUserId());
+      return dto;
+    } catch (Exception e) {
+      throw new RuntimeException("Failed to get NetEase playlist", e);
+    }
+  }
+
   public List<NeteaseTrack> getPlaylistTracks(String cookie, String playlistId) {
     try {
       NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = webClient
