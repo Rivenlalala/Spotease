@@ -2,6 +2,7 @@ package com.spotease.service;
 
 import com.spotease.dto.spotify.SpotifyPlaylist;
 import com.spotease.dto.spotify.SpotifyTrack;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
 import se.michaelthelin.spotify.model_objects.specification.Paging;
@@ -18,13 +19,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
 public class SpotifyService {
+
+  private final SpotifyApi spotifyApi;
 
   public List<SpotifyPlaylist> getPlaylists(String accessToken) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+      spotifyApi.setAccessToken(accessToken);
 
-      GetListOfCurrentUsersPlaylistsRequest getPlaylistsRequest = authenticatedApi
+      GetListOfCurrentUsersPlaylistsRequest getPlaylistsRequest = spotifyApi
           .getListOfCurrentUsersPlaylists()
           .limit(50)
           .build();
@@ -41,9 +45,9 @@ public class SpotifyService {
 
   public List<SpotifyTrack> getPlaylistTracks(String accessToken, String playlistId) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+      spotifyApi.setAccessToken(accessToken);
 
-      GetPlaylistsItemsRequest getPlaylistItemsRequest = authenticatedApi
+      GetPlaylistsItemsRequest getPlaylistItemsRequest = spotifyApi
           .getPlaylistsItems(playlistId)
           .limit(100)
           .build();
@@ -62,9 +66,9 @@ public class SpotifyService {
 
   public List<SpotifyTrack> searchTrack(String accessToken, String query) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+      spotifyApi.setAccessToken(accessToken);
 
-      SearchTracksRequest searchTracksRequest = authenticatedApi
+      SearchTracksRequest searchTracksRequest = spotifyApi
           .searchTracks(query)
           .limit(10)
           .build();
@@ -81,9 +85,9 @@ public class SpotifyService {
 
   public void addTracksToPlaylist(String accessToken, String playlistId, List<String> trackUris) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+      spotifyApi.setAccessToken(accessToken);
 
-      AddItemsToPlaylistRequest addItemsRequest = authenticatedApi
+      AddItemsToPlaylistRequest addItemsRequest = spotifyApi
           .addItemsToPlaylist(playlistId, trackUris.toArray(new String[0]))
           .build();
 
@@ -91,12 +95,6 @@ public class SpotifyService {
     } catch (Exception e) {
       throw new RuntimeException("Failed to add tracks to playlist", e);
     }
-  }
-
-  private SpotifyApi createAuthenticatedApi(String accessToken) {
-    return new SpotifyApi.Builder()
-        .setAccessToken(accessToken)
-        .build();
   }
 
   private SpotifyPlaylist mapToSpotifyPlaylist(PlaylistSimplified playlist) {
