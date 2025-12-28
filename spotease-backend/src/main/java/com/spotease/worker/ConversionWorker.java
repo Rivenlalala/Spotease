@@ -129,10 +129,16 @@ public class ConversionWorker {
 
     } catch (Exception e) {
       log.error("Error processing job {}: {}", jobId, e.getMessage(), e);
-      job.setStatus(JobStatus.FAILED);
-      jobRepository.save(job);
-      webSocketService.sendJobError(job, e.getMessage());
-      throw new RuntimeException("Failed to process conversion job", e);
+
+      // Reload job to ensure we have latest state
+      ConversionJob failedJob = jobRepository.findById(jobId)
+          .orElse(job);
+
+      failedJob.setStatus(JobStatus.FAILED);
+      jobRepository.save(failedJob);
+      webSocketService.sendJobError(failedJob, e.getMessage());
+
+      // Don't rethrow - we've handled the error
     }
   }
 

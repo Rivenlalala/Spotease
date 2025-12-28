@@ -199,4 +199,29 @@ class ConversionWorkerTest {
     // Then
     verify(neteaseService, never()).addTracksToPlaylist(any(), any(), any());
   }
+
+  @Test
+  void shouldHandleErrorsGracefully() {
+    // Given
+    when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+    when(jobRepository.save(any(ConversionJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+    when(tokenEncryption.decrypt(any())).thenReturn("decrypted-token");
+    when(neteaseService.createPlaylist(any(), any())).thenReturn("created-playlist-id");
+    when(spotifyService.getPlaylistTracks(any(), any()))
+        .thenThrow(new RuntimeException("Spotify API error"));
+
+    // When
+    conversionWorker.processConversionJob(1L);
+
+    // Then
+    // Verify job was saved multiple times (PROCESSING, FAILED)
+    ArgumentCaptor<ConversionJob> jobCaptor = ArgumentCaptor.forClass(ConversionJob.class);
+    verify(jobRepository, atLeastOnce()).save(jobCaptor.capture());
+
+    // Verify that at least one save had FAILED status
+    assertThat(jobCaptor.getAllValues())
+        .anyMatch(j -> j.getStatus() == JobStatus.FAILED);
+
+    verify(webSocketService).sendJobError(any(ConversionJob.class), anyString());
+  }
 }
