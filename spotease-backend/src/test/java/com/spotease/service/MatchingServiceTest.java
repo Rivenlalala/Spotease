@@ -233,4 +233,49 @@ class MatchingServiceTest {
     assertThat(result.getStatus()).isNotEqualTo(MatchStatus.FAILED);
     assertThat(result.getDestinationTrackId()).isNotNull();
   }
+
+  @Test
+  void shouldHandleMissingDurationWithWeightRebalancing() {
+    // Source has duration, candidate doesn't
+    SpotifyTrack source = createSpotifyTrack("1", "Test Song", List.of("Test Artist"), 240000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Test Song", List.of("Test Artist"), null);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    // Should still match based on name and artist (rebalanced to 50/50)
+    assertThat(result.getMatchConfidence()).isGreaterThan(0.8);
+    assertThat(result.getStatus()).isEqualTo(MatchStatus.AUTO_MATCHED);
+  }
+
+  @Test
+  void shouldHandleMissingArtistWithWeightRebalancing() {
+    // Source has artist, candidate doesn't
+    SpotifyTrack source = createSpotifyTrack("1", "Test Song", List.of("Test Artist"), 240000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Test Song", List.of(), 240000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    // Should still match based on duration and name (rebalanced to 75/25)
+    assertThat(result.getMatchConfidence()).isGreaterThan(0.7);
+  }
+
+  @Test
+  void shouldHandleMultipleArtists() {
+    SpotifyTrack source = createSpotifyTrack("1", "Test Song",
+        List.of("Ed Sheeran", "Taylor Swift"), 240000);
+    NeteaseTrack candidate = createNeteaseTrack("1", "Test Song",
+        List.of("Taylor Swift", "Ed Sheeran"), 240000);
+
+    when(neteaseService.searchTrack(anyString(), anyString())).thenReturn(List.of(candidate));
+
+    TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
+
+    // Should match well even with different artist order
+    assertThat(result.getMatchConfidence()).isGreaterThan(0.9);
+    assertThat(result.getStatus()).isEqualTo(MatchStatus.AUTO_MATCHED);
+  }
 }
