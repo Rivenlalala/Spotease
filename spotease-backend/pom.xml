@@ -70,6 +70,13 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+
+        <!-- Spotify SDK -->
+        <dependency>
+            <groupId>se.michaelthelin.spotify</groupId>
+            <artifactId>spotify-web-api-java</artifactId>
+            <version>9.4.0</version>
+        </dependency>
     </dependencies>
 
     <build>
