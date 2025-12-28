@@ -4,6 +4,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
 import { useWebSocket } from '@/hooks/useWebSocket';
 import { conversionsApi } from '@/api/conversions';
+import { ConversionJob } from '@/types/conversion';
 import Layout from '@/components/layout/Layout';
 import ConversionJobCard from '@/components/conversions/ConversionJobCard';
 import { Button } from '@/components/ui/button';
@@ -27,9 +28,9 @@ const Dashboard = () => {
     enabled: authStatus?.authenticated === true,
     onJobUpdate: (updatedJob) => {
       // Update the job in the cache
-      queryClient.setQueryData(['conversions'], (oldJobs: any) => {
+      queryClient.setQueryData(['conversions'], (oldJobs: ConversionJob[] | undefined) => {
         if (!oldJobs) return [updatedJob];
-        return oldJobs.map((job: any) =>
+        return oldJobs.map((job: ConversionJob) =>
           job.id === updatedJob.id ? updatedJob : job
         );
       });
