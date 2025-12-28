@@ -198,6 +198,15 @@ class ConversionWorkerTest {
 
     // Then
     verify(neteaseService, never()).addTracksToPlaylist(any(), any(), any());
+
+    // Verify match was saved even though track was skipped
+    verify(trackMatchRepository).save(any(TrackMatch.class));
+
+    // Verify counters were updated correctly
+    verify(jobRepository, atLeastOnce()).save(argThat(j ->
+        j.getHighConfidenceMatches() == 1 &&
+        j.getProcessedTracks() == 1
+    ));
   }
 
   @Test

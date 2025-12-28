@@ -61,8 +61,10 @@ public class ConversionWorker {
       List<String> existingTrackIds = new ArrayList<>();
       if (job.getMode() == ConversionMode.UPDATE) {
         List<?> existingTracks = getDestinationTracks(job, destToken);
-        existingTrackIds = extractTrackIds(existingTracks);
-        log.info("Found {} existing tracks in destination playlist", existingTrackIds.size());
+        if (existingTracks != null) {
+          existingTrackIds = extractTrackIds(existingTracks);
+          log.info("Found {} existing tracks in destination playlist", existingTrackIds.size());
+        }
       }
 
       // Process each track
@@ -190,6 +192,14 @@ public class ConversionWorker {
     }
   }
 
+  /**
+   * Fetches all tracks from the destination playlist.
+   * Used in UPDATE mode to avoid adding duplicate tracks.
+   *
+   * @param job The conversion job containing destination platform details
+   * @param token The decrypted authentication token for the destination platform
+   * @return List of tracks from the destination playlist, or empty list if none exist
+   */
   private List<?> getDestinationTracks(ConversionJob job, String token) {
     if (job.getDestinationPlatform() == Platform.SPOTIFY) {
       return spotifyService.getPlaylistTracks(token, job.getDestinationPlaylistId());
@@ -198,6 +208,13 @@ public class ConversionWorker {
     }
   }
 
+  /**
+   * Extracts track IDs from a list of platform-specific track objects.
+   * Supports both SpotifyTrack and NeteaseTrack objects.
+   *
+   * @param tracks List of track objects (can be SpotifyTrack or NeteaseTrack instances)
+   * @return List of track IDs extracted from the input tracks
+   */
   private List<String> extractTrackIds(List<?> tracks) {
     return tracks.stream()
         .map(track -> {
