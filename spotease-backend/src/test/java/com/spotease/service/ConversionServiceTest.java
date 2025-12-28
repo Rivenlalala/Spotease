@@ -38,6 +38,9 @@ class ConversionServiceTest {
   @Mock
   private com.spotease.util.TokenEncryption tokenEncryption;
 
+  @Mock
+  private com.spotease.worker.ConversionWorker conversionWorker;
+
   @InjectMocks
   private ConversionService conversionService;
 
@@ -132,5 +135,29 @@ class ConversionServiceTest {
     assertThatThrownBy(() -> conversionService.createJob(1L, request))
         .isInstanceOf(IllegalArgumentException.class)
         .hasMessageContaining("destination playlist ID is required");
+  }
+
+  @Test
+  void shouldTriggerWorkerAfterJobCreation() {
+    // Given
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    when(tokenEncryption.decrypt("encrypted-spotify-token")).thenReturn("decrypted-spotify-token");
+
+    SpotifyPlaylist sourcePlaylist = new SpotifyPlaylist();
+    sourcePlaylist.setId("playlist123");
+    sourcePlaylist.setName("Source Playlist");
+    sourcePlaylist.setTrackCount(10);
+    when(spotifyService.getPlaylistById("decrypted-spotify-token", "playlist123"))
+        .thenReturn(sourcePlaylist);
+
+    ConversionJob savedJob = new ConversionJob();
+    savedJob.setId(1L);
+    when(jobRepository.save(any())).thenReturn(savedJob);
+
+    // When
+    conversionService.createJob(1L, request);
+
+    // Then
+    verify(conversionWorker).processConversionJob(1L);
   }
 }

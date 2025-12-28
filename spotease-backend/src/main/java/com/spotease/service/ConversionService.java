@@ -7,6 +7,7 @@ import com.spotease.model.*;
 import com.spotease.repository.ConversionJobRepository;
 import com.spotease.repository.UserRepository;
 import com.spotease.util.TokenEncryption;
+import com.spotease.worker.ConversionWorker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -22,6 +23,7 @@ public class ConversionService {
   private final SpotifyService spotifyService;
   private final NeteaseService neteaseService;
   private final TokenEncryption tokenEncryption;
+  private final ConversionWorker conversionWorker;
 
   @Transactional
   public ConversionJob createJob(Long userId, ConversionRequest request) {
@@ -88,6 +90,9 @@ public class ConversionService {
 
     ConversionJob savedJob = jobRepository.save(job);
     log.info("Created conversion job {}: {} → {}", savedJob.getId(), sourcePlaylistName, job.getDestinationPlaylistName());
+
+    // Trigger async worker
+    conversionWorker.processConversionJob(savedJob.getId());
 
     return savedJob;
   }
