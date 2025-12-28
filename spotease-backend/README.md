@@ -11,6 +11,16 @@ Spring Boot backend for Spotease - Spotify and NetEase Music playlist converter.
 - PostgreSQL
 - Lombok
 
+## Key Dependencies
+
+- **Spotify Web API Java SDK** 9.4.0 - Official Spotify API client
+- **NetEase Cloud Music API** - Community API service (Node.js)
+- Spring Boot 3.2.1
+- PostgreSQL 15
+- Spring Data JPA
+- Spring Security
+- Spring WebFlux (WebClient for NetEase API)
+
 ## Prerequisites
 
 - Java 17+
@@ -29,8 +39,11 @@ psql -U postgres -c "CREATE DATABASE spotease;"
 export SPOTIFY_CLIENT_ID=your_spotify_client_id
 export SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
 export ENCRYPTION_KEY=your_32_character_encryption_key
-export DB_USERNAME=postgres  # optional, defaults to postgres
-export DB_PASSWORD=postgres  # optional, defaults to postgres
+
+# Optional (with defaults)
+export DB_USERNAME=postgres
+export DB_PASSWORD=postgres
+export NETEASE_API_URL=https://netease-api.rivenlalala.xyz
 ```
 
 3. **Update application.yml or set environment variables:**
@@ -87,7 +100,7 @@ mvn clean package
 
 This project uses Hibernate auto-DDL (development only). For production, consider using Flyway or Liquibase.
 
-## Status
+## Current Implementation Status
 
 **Implemented:**
 - ✅ Project structure and dependencies
@@ -98,10 +111,24 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 - ✅ Async executor configuration
 - ✅ Spotify OAuth authentication
 - ✅ SpotifyService for API calls
+- ✅ **Spotify SDK integration** (spotify-web-api-java 9.4.0)
+- ✅ **NetEase Cloud Music API integration** (https://netease-api.rivenlalala.xyz)
+
+**Implemented Services:**
+- **SpotifyService**: Full integration with Spotify Web API SDK
+  - Get user playlists
+  - Get playlist tracks
+  - Search tracks
+  - Add tracks to playlist
+
+- **NeteaseService**: Integration with NetEase Cloud Music API service
+  - Get user playlists
+  - Get playlist tracks
+  - Search tracks
+  - Add tracks to playlist
 
 **TODO:**
 - ⏳ NetEase QR authentication implementation
-- ⏳ NeteaseService implementation
 - ⏳ Playlist endpoints
 - ⏳ Conversion job endpoints
 - ⏳ Track matching service
