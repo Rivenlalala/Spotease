@@ -9,5 +9,5 @@ public class SpotifyPlaylist {
     private String id;
     private String name;
     private String description;
-    private Integer totalTracks;
+    private Integer trackCount;
 }
