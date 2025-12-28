@@ -151,4 +151,40 @@ public final class StringSimilarity {
     String result = SPECIAL_CHARS_PATTERN.matcher(input).replaceAll(" ");
     return WHITESPACE_PATTERN.matcher(result).replaceAll(" ").trim();
   }
+
+  /**
+   * Calculate similarity score between two strings (0.0 to 1.0).
+   * Uses normalized Levenshtein distance.
+   *
+   * <p>Strings are first normalized (lowercase, special char removal, etc.)
+   * before calculating the Levenshtein distance. The distance is then converted
+   * to a similarity score where 1.0 means identical and 0.0 means completely different.
+   *
+   * <p><b>Algorithm:</b> similarity = 1.0 - (distance / maxLength)
+   *
+   * <p>Null inputs are treated as empty strings.
+   *
+   * @param s1 first string (null treated as empty string)
+   * @param s2 second string (null treated as empty string)
+   * @return similarity score (1.0 = identical, 0.0 = completely different)
+   */
+  public static double calculateSimilarity(String s1, String s2) {
+    String n1 = normalize(s1);
+    String n2 = normalize(s2);
+
+    // Both empty = identical
+    if (n1.isEmpty() && n2.isEmpty()) {
+      return 1.0;
+    }
+
+    // One empty = completely different
+    if (n1.isEmpty() || n2.isEmpty()) {
+      return 0.0;
+    }
+
+    int distance = levenshteinDistance(n1, n2);
+    int maxLength = Math.max(n1.length(), n2.length());
+
+    return 1.0 - ((double) distance / maxLength);
+  }
 }

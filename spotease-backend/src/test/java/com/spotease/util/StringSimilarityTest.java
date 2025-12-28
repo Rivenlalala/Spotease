@@ -89,4 +89,35 @@ class StringSimilarityTest {
     assertThat(StringSimilarity.normalize("")).isEqualTo("");
     assertThat(StringSimilarity.normalize("   ")).isEqualTo("");
   }
+
+  @Test
+  void testCalculateSimilarityScore() {
+    // Identical strings = 1.0
+    assertThat(StringSimilarity.calculateSimilarity("hello", "hello"))
+        .isEqualTo(1.0);
+
+    // Completely different = low score
+    assertThat(StringSimilarity.calculateSimilarity("abc", "xyz"))
+        .isLessThan(0.5);
+
+    // Similar strings = high score
+    assertThat(StringSimilarity.calculateSimilarity("Shape of You", "Shape Of You"))
+        .isGreaterThan(0.9);
+
+    // Normalized comparison
+    assertThat(StringSimilarity.calculateSimilarity(
+        "Ed Sheeran (feat. Taylor Swift)",
+        "Ed Sheeran feat Taylor Swift"
+    )).isGreaterThan(0.95);
+  }
+
+  @Test
+  void testCalculateSimilarityEdgeCases() {
+    // Two empty strings = 1.0 (identical)
+    assertThat(StringSimilarity.calculateSimilarity("", "")).isEqualTo(1.0);
+
+    // One empty = 0.0
+    assertThat(StringSimilarity.calculateSimilarity("test", "")).isEqualTo(0.0);
+    assertThat(StringSimilarity.calculateSimilarity("", "test")).isEqualTo(0.0);
+  }
 }
