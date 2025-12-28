@@ -16,7 +16,7 @@ export interface Track {
 }
 
 export interface TrackMatch {
-  id: string;
+  id: number;
   sourceTrackId: string;
   sourceTrackName: string;
   sourceArtist: string;

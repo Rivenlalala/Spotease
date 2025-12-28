@@ -14,7 +14,7 @@ export enum JobStatus {
 }
 
 export interface ConversionJob {
-  id: string;
+  id: number;
   sourcePlatform: Platform;
   sourcePlaylistId: string;
   sourcePlaylistName: string;
@@ -28,9 +28,9 @@ export interface ConversionJob {
   highConfidenceMatches: number;
   lowConfidenceMatches: number;
   failedTracks: number;
-  createdAt: Date;
-  updatedAt: Date;
-  completedAt?: Date;
+  createdAt: string;
+  updatedAt: string;
+  completedAt?: string;
 }
 
 export interface CreateConversionRequest {

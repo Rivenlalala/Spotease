@@ -1,5 +1,5 @@
 export interface User {
-  id: string;
+  id: number;
   email: string;
   spotifyUserId?: string;
   neteaseUserId?: string;
@@ -7,7 +7,7 @@ export interface User {
 
 export interface AuthStatus {
   authenticated: boolean;
-  userId?: string;
+  userId?: number;
   email?: string;
   spotifyConnected: boolean;
   neteaseConnected: boolean;
