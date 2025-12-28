@@ -100,32 +100,58 @@ mvn clean package
 
 This project uses Hibernate auto-DDL (development only). For production, consider using Flyway or Liquibase.
 
-## Current Implementation Status
+## Implemented Features
 
-**Implemented:**
-- ✅ Project structure and dependencies
-- ✅ JPA entities (User, ConversionJob, TrackMatch)
-- ✅ Spring Data repositories
-- ✅ Token encryption utility
-- ✅ Spring Security configuration
-- ✅ Async executor configuration
-- ✅ Spotify OAuth authentication
-- ✅ SpotifyService for API calls
-- ✅ **Spotify SDK integration** (spotify-web-api-java 9.4.0)
-- ✅ **NetEase Cloud Music API integration** (https://netease-api.rivenlalala.xyz)
+**Core Services:**
+- ✅ ConversionService - Job creation and validation
+- ✅ ConversionWorker - Async background processor
+- ✅ WebSocketService - Real-time job updates
+- ✅ MatchingService - Track matching algorithm
+- ✅ SpotifyService - Spotify SDK integration
+- ✅ NeteaseService - NetEase API integration
 
-**Implemented Services:**
-- **SpotifyService**: Full integration with Spotify Web API SDK
-  - Get user playlists
-  - Get playlist tracks
-  - Search tracks
-  - Add tracks to playlist
+**REST API Endpoints:**
+- `POST /api/conversions` - Create new conversion job
+- `GET /api/conversions` - List all user jobs
+- `GET /api/conversions/{jobId}` - Get job details
+- `DELETE /api/conversions/{jobId}` - Delete job
+- `GET /api/conversions/{jobId}/matches/pending` - Get pending matches
+- `POST /api/conversions/{jobId}/matches/{matchId}/approve` - Approve match
+- `POST /api/conversions/{jobId}/matches/{matchId}/skip` - Skip match
 
-- **NeteaseService**: Integration with NetEase Cloud Music API service
-  - Get user playlists
-  - Get playlist tracks
-  - Search tracks
-  - Add tracks to playlist
+**WebSocket:**
+- `WS /ws/conversions` - Real-time job updates
+- Topics: `/topic/conversions/{jobId}`
+
+## Job Processing Flow
+
+1. User creates conversion job via POST `/api/conversions`
+2. Job status: QUEUED → backend saves job
+3. ConversionWorker processes asynchronously
+4. Job status: PROCESSING
+5. For each track:
+   - MatchingService finds best match
+   - AUTO_MATCHED (≥0.85): Add to destination immediately
+   - PENDING_REVIEW (0.60-0.84): Save for user review
+   - FAILED (<0.60): Save for user review
+6. WebSocket updates sent every 5 tracks
+7. Job status: REVIEW_PENDING (if pending/failed) or COMPLETED
+8. User reviews pending matches via frontend
+9. Job status: COMPLETED when all reviewed
+
+## WebSocket Message Format
+
+```json
+{
+  "jobId": 1,
+  "status": "PROCESSING",
+  "totalTracks": 50,
+  "processedTracks": 25,
+  "highConfidenceMatches": 20,
+  "lowConfidenceMatches": 3,
+  "failedTracks": 2
+}
+```
 
 ### Track Matching Algorithm
 
@@ -160,14 +186,30 @@ TrackMatch match = matchingService.findBestMatch(
 );
 ```
 
+## Implementation Status
+
+**Completed:**
+- ✅ Project structure and dependencies
+- ✅ JPA entities (User, ConversionJob, TrackMatch)
+- ✅ Spring Data repositories
+- ✅ Token encryption utility
+- ✅ Spring Security configuration
+- ✅ Async executor configuration
+- ✅ Spotify OAuth authentication
+- ✅ **Spotify SDK integration** (spotify-web-api-java 9.4.0)
+- ✅ **NetEase Cloud Music API integration** (https://netease-api.rivenlalala.xyz)
+- ✅ Track matching service with multi-tier fallback
+- ✅ Background worker implementation
+- ✅ WebSocket configuration (STOMP)
+- ✅ Conversion job endpoints
+- ✅ Review endpoints for pending matches
+- ✅ CREATE and UPDATE playlist modes
+- ✅ Error handling and retry logic
+
 **TODO:**
 - ⏳ NetEase QR authentication implementation
-- ⏳ Playlist endpoints
-- ⏳ Conversion job endpoints
-- ✅ Track matching service
-- ⏳ Background worker implementation
-- ⏳ WebSocket configuration
-- ⏳ Review endpoints
+- ⏳ Frontend integration with WebSocket
+- ⏳ Manual search endpoint for alternative matches
 
 ## License
 
