@@ -201,6 +201,8 @@ class PlaylistControllerTest {
         .andExpect(jsonPath("$.name", is("Test Playlist")))
         .andExpect(jsonPath("$.trackCount", is(42)));
 
+    verify(userRepository).findById(1L);
+    verify(tokenEncryption).decrypt("encrypted_spotify_token");
     verify(spotifyService).getPlaylistById("decrypted_token", "playlist123");
   }
 
@@ -224,6 +226,8 @@ class PlaylistControllerTest {
         .andExpect(jsonPath("$.name", is("网易歌单")))
         .andExpect(jsonPath("$.trackCount", is(30)));
 
+    verify(userRepository).findById(1L);
+    verify(tokenEncryption).decrypt("encrypted_netease_cookie");
     verify(neteaseService).getPlaylistById("decrypted_cookie", "789");
   }
 
@@ -243,5 +247,8 @@ class PlaylistControllerTest {
     // Act & Assert
     mockMvc.perform(get("/api/playlists/spotify/123"))
         .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(spotifyService);
+    verifyNoInteractions(neteaseService);
   }
 }
