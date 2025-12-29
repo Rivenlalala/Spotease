@@ -12,8 +12,8 @@ spotease:
   encryption:
     key: ${ENCRYPTION_KEY:dev12345678901234567890123456789}
   spotify:
-    client-id: ${SPOTIFY_CLIENT_ID:changeme}
-    client-secret: ${SPOTIFY_CLIENT_SECRET:changeme}
+    client-id: ${SPOTIFY_CLIENT_ID:7d0adad77e1a4deeac3b7aa5c206a52c}
+    client-secret: ${SPOTIFY_CLIENT_SECRET:46bb3db718a24ddf8b3818da91232047}
     redirect-uri: http://127.0.0.1:8080/api/auth/spotify/callback
   netease:
     api-url: ${NETEASE_API_URL:https://netease-api.rivenlalala.xyz}
