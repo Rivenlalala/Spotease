@@ -2,6 +2,7 @@ package com.spotease.controller;
 
 import com.spotease.dto.TrackMatchDto;
 import com.spotease.model.ConversionJob;
+import com.spotease.model.JobStatus;
 import com.spotease.model.MatchStatus;
 import com.spotease.model.Platform;
 import com.spotease.model.TrackMatch;
@@ -148,6 +149,9 @@ public class ReviewController {
       match.setAppliedAt(LocalDateTime.now());
       matchRepository.save(match);
 
+      // Check if all matches are now reviewed
+      checkAndUpdateJobStatus(job);
+
       log.info("Successfully approved match {} and added track to playlist", matchId);
       return ResponseEntity.ok().build();
 
@@ -206,6 +210,9 @@ public class ReviewController {
       match.setStatus(MatchStatus.USER_SKIPPED);
       match.setReviewedAt(LocalDateTime.now());
       matchRepository.save(match);
+
+      // Check if all matches are now reviewed
+      checkAndUpdateJobStatus(job);
 
       log.info("Successfully skipped match {}", matchId);
       return ResponseEntity.ok().build();
@@ -314,6 +321,24 @@ public class ReviewController {
         .status(match.getStatus())
         .errorMessage(match.getErrorMessage())
         .build();
+  }
+
+  /**
+   * Helper method to check if all matches are reviewed and update job status
+   */
+  private void checkAndUpdateJobStatus(ConversionJob job) {
+    // Count remaining pending/failed matches
+    long remainingCount = matchRepository.countByConversionJob_IdAndStatusIn(
+        job.getId(),
+        List.of(MatchStatus.PENDING_REVIEW, MatchStatus.FAILED)
+    );
+
+    if (remainingCount == 0 && job.getStatus() == JobStatus.REVIEW_PENDING) {
+      job.setStatus(JobStatus.COMPLETED);
+      job.setCompletedAt(LocalDateTime.now());
+      jobRepository.save(job);
+      log.info("Job {} completed - all matches reviewed", job.getId());
+    }
   }
 
   /**
