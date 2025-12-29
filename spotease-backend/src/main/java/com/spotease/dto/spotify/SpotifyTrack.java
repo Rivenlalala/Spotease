@@ -18,4 +18,5 @@ public class SpotifyTrack {
     private Integer durationMs;
 
     private String isrc;
+    private String albumImageUrl;
 }
