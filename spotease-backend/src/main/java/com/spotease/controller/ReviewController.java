@@ -1,5 +1,6 @@
 package com.spotease.controller;
 
+import com.spotease.dto.ApproveMatchRequest;
 import com.spotease.dto.TrackMatchDto;
 import com.spotease.model.ConversionJob;
 import com.spotease.model.JobStatus;
@@ -96,6 +97,7 @@ public class ReviewController {
   public ResponseEntity<Void> approveMatch(
       @PathVariable Long jobId,
       @PathVariable Long matchId,
+      @RequestBody(required = false) ApproveMatchRequest request,
       HttpSession session) {
 
     Long userId = getUserIdFromSession(session);
@@ -130,7 +132,18 @@ public class ReviewController {
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
     }
 
-    // Verify match has destination track
+    // If request body provided, update destination track info
+    if (request != null && request.getDestinationTrackId() != null) {
+      log.info("Updating destination track for match {} to {}", matchId, request.getDestinationTrackId());
+      match.setDestinationTrackId(request.getDestinationTrackId());
+      match.setDestinationTrackName(request.getDestinationTrackName());
+      match.setDestinationArtist(request.getDestinationArtist());
+      match.setDestinationDuration(request.getDestinationDuration());
+      // Update confidence to 1.0 since user manually selected
+      match.setMatchConfidence(1.0);
+    }
+
+    // Verify match has destination track (either original or from request)
     if (match.getDestinationTrackId() == null) {
       log.warn("Match {} has no destination track ID", matchId);
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
