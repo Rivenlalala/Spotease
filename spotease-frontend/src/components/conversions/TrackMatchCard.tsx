@@ -104,6 +104,81 @@ const TrackMatchCard = ({ match, onApprove, onSkip, onSearch, isProcessing = fal
     </div>
   );
 
+  const SearchResultsView = () => (
+    <div className="bg-gray-50 rounded-lg p-4">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-900">Search Results</h3>
+        <button
+          onClick={handleCloseSearch}
+          className="text-gray-500 hover:text-gray-700"
+          aria-label="Close search"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+
+      <form onSubmit={handleSearchSubmit} className="flex gap-2 mb-4">
+        <Input
+          type="text"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search for tracks..."
+          className="flex-1"
+        />
+        <Button type="submit" size="icon" variant="outline" disabled={isLoading}>
+          <Search className="w-4 h-4" />
+        </Button>
+      </form>
+
+      {isLoading ? (
+        <SearchResultSkeleton />
+      ) : searchError ? (
+        <p className="text-sm text-red-600 text-center py-4">{searchError}</p>
+      ) : searchResults.length === 0 ? (
+        <p className="text-sm text-gray-600 text-center py-4">
+          No tracks found. Try different keywords.
+        </p>
+      ) : (
+        <div className="space-y-1">
+          {searchResults.map((track) => (
+            <button
+              key={track.id}
+              onClick={() => handleSelectTrack(track)}
+              className="w-full flex items-center gap-3 p-2 rounded-lg hover:bg-gray-100 transition-colors text-left"
+            >
+              {track.albumImageUrl ? (
+                <img
+                  src={track.albumImageUrl}
+                  alt={track.album}
+                  className="w-12 h-12 rounded flex-shrink-0 object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center flex-shrink-0">
+                  <Music className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-gray-900 truncate">{track.name}</p>
+                <p className="text-sm text-gray-600 truncate">
+                  {track.artists.join(', ')} • {track.album}
+                </p>
+              </div>
+              <span className="text-sm text-gray-500 flex-shrink-0">
+                {formatDuration(Math.round(track.duration / 1000))}
+              </span>
+            </button>
+          ))}
+        </div>
+      )}
+
+      <div className="mt-4 flex justify-center">
+        <Button variant="outline" onClick={handleCloseSearch}>
+          Cancel
+        </Button>
+      </div>
+    </div>
+  );
+
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.85) return 'text-green-600';
     if (confidence >= 0.60) return 'text-orange-600';
