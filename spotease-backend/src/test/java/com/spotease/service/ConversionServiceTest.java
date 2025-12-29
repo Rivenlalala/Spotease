@@ -2,6 +2,7 @@ package com.spotease.service;
 
 import com.spotease.dto.ConversionRequest;
 import com.spotease.dto.spotify.SpotifyPlaylist;
+import com.spotease.event.ConversionJobCreatedEvent;
 import com.spotease.model.*;
 import com.spotease.repository.ConversionJobRepository;
 import com.spotease.repository.UserRepository;
@@ -12,6 +13,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
@@ -39,7 +41,7 @@ class ConversionServiceTest {
   private com.spotease.util.TokenEncryption tokenEncryption;
 
   @Mock
-  private com.spotease.worker.ConversionWorker conversionWorker;
+  private ApplicationEventPublisher eventPublisher;
 
   @InjectMocks
   private ConversionService conversionService;
@@ -138,7 +140,7 @@ class ConversionServiceTest {
   }
 
   @Test
-  void shouldTriggerWorkerAfterJobCreation() {
+  void shouldPublishEventAfterJobCreation() {
     // Given
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     when(tokenEncryption.decrypt("encrypted-spotify-token")).thenReturn("decrypted-spotify-token");
@@ -158,6 +160,10 @@ class ConversionServiceTest {
     conversionService.createJob(1L, request);
 
     // Then
-    verify(conversionWorker).processConversionJob(1L);
+    ArgumentCaptor<ConversionJobCreatedEvent> eventCaptor = ArgumentCaptor.forClass(ConversionJobCreatedEvent.class);
+    verify(eventPublisher).publishEvent(eventCaptor.capture());
+
+    ConversionJobCreatedEvent event = eventCaptor.getValue();
+    assertThat(event.getJobId()).isEqualTo(1L);
   }
 }

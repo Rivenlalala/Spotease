@@ -3,13 +3,14 @@ package com.spotease.service;
 import com.spotease.dto.ConversionRequest;
 import com.spotease.dto.spotify.SpotifyPlaylist;
 import com.spotease.dto.netease.NeteasePlaylist;
+import com.spotease.event.ConversionJobCreatedEvent;
 import com.spotease.model.*;
 import com.spotease.repository.ConversionJobRepository;
 import com.spotease.repository.UserRepository;
 import com.spotease.util.TokenEncryption;
-import com.spotease.worker.ConversionWorker;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,7 +24,7 @@ public class ConversionService {
   private final SpotifyService spotifyService;
   private final NeteaseService neteaseService;
   private final TokenEncryption tokenEncryption;
-  private final ConversionWorker conversionWorker;
+  private final ApplicationEventPublisher eventPublisher;
 
   @Transactional
   public ConversionJob createJob(Long userId, ConversionRequest request) {
@@ -91,8 +92,8 @@ public class ConversionService {
     ConversionJob savedJob = jobRepository.save(job);
     log.info("Created conversion job {}: {} → {}", savedJob.getId(), sourcePlaylistName, job.getDestinationPlaylistName());
 
-    // Trigger async worker
-    conversionWorker.processConversionJob(savedJob.getId());
+    // Publish event - worker will be triggered after transaction commits
+    eventPublisher.publishEvent(new ConversionJobCreatedEvent(this, savedJob.getId()));
 
     return savedJob;
   }
