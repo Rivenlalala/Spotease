@@ -1,16 +1,31 @@
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import type { TrackMatch } from '@/types/track';
-import { Music, Check, X } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import type { SearchTrack, TrackMatch } from '@/types/track';
+import { Music, Check, X, Search } from 'lucide-react';
 
 interface TrackMatchCardProps {
   match: TrackMatch;
-  onApprove: () => void;
+  onApprove: (alternativeTrack?: {
+    destinationTrackId: string;
+    destinationTrackName: string;
+    destinationArtist: string;
+    destinationDuration: number;
+    destinationAlbumImageUrl?: string;
+  }) => void;
   onSkip: () => void;
+  onSearch: (query: string) => Promise<SearchTrack[]>;
   isProcessing?: boolean;
 }
 
-const TrackMatchCard = ({ match, onApprove, onSkip, isProcessing = false }: TrackMatchCardProps) => {
+const TrackMatchCard = ({ match, onApprove, onSkip, onSearch, isProcessing = false }: TrackMatchCardProps) => {
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<SearchTrack[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [selectedTrack, setSelectedTrack] = useState<SearchTrack | null>(null);
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
