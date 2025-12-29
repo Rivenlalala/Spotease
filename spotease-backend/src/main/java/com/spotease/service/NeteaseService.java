@@ -1,6 +1,7 @@
 package com.spotease.service;
 
 import com.spotease.dto.netease.NeteasePlaylist;
+import com.spotease.dto.netease.NeteasePlaylistDetailResponse;
 import com.spotease.dto.netease.NeteaseResponse;
 import com.spotease.dto.netease.NeteaseTrack;
 import jakarta.annotation.PostConstruct;
@@ -38,7 +39,7 @@ public class NeteaseService {
       NeteaseResponse<Void> accountResponse = webClient
           .get()
           .uri("/user/account")
-          .header("Cookie", "MUSIC_U=" + cookie)
+          .header("Cookie", cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
@@ -65,7 +66,7 @@ public class NeteaseService {
               .queryParam("uid", userId)
               .queryParam("limit", 100)
               .build())
-          .header("Cookie", "MUSIC_U=" + cookie)
+          .header("Cookie", cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
@@ -87,15 +88,15 @@ public class NeteaseService {
 
   public NeteasePlaylist getPlaylistById(String cookie, String playlistId) {
     try {
-      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = webClient
+      NeteasePlaylistDetailResponse response = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/playlist/detail")
               .queryParam("id", playlistId)
               .build())
-          .header("Cookie", "MUSIC_U=" + cookie)
+          .header("Cookie", cookie)
           .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {})
+          .bodyToMono(NeteasePlaylistDetailResponse.class)
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
 
@@ -106,12 +107,12 @@ public class NeteaseService {
       if (response.getCode() != 200) {
         throw new RuntimeException("NetEase API returned error code: " + response.getCode());
       }
-      if (response.getData() == null || response.getData().getPlaylist() == null) {
+      if (response.getPlaylist() == null) {
         throw new RuntimeException("Playlist data is null");
       }
 
       // Map to NeteasePlaylist DTO
-      NeteaseResponse.NeteasePlaylistDetail playlistDetail = response.getData().getPlaylist();
+      NeteasePlaylistDetailResponse.NeteasePlaylistDetail playlistDetail = response.getPlaylist();
       NeteasePlaylist dto = new NeteasePlaylist();
       dto.setId(playlistDetail.getId());
       dto.setName(playlistDetail.getName());
@@ -127,15 +128,15 @@ public class NeteaseService {
 
   public List<NeteaseTrack> getPlaylistTracks(String cookie, String playlistId) {
     try {
-      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = webClient
+      NeteasePlaylistDetailResponse response = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/playlist/detail")
               .queryParam("id", playlistId)
               .build())
-          .header("Cookie", "MUSIC_U=" + cookie)
+          .header("Cookie", cookie)
           .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {})
+          .bodyToMono(NeteasePlaylistDetailResponse.class)
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
 
@@ -148,8 +149,8 @@ public class NeteaseService {
       }
 
       // Response has {playlist: {tracks: [...]}}
-      return response.getData() != null && response.getData().getPlaylist() != null
-          ? response.getData().getPlaylist().getTracks()
+      return response.getPlaylist() != null && response.getPlaylist().getTracks() != null
+          ? response.getPlaylist().getTracks()
           : List.of();
     } catch (Exception e) {
       throw new RuntimeException("Failed to get playlist tracks", e);
@@ -166,7 +167,7 @@ public class NeteaseService {
               .queryParam("type", 1)  // 1 = single track
               .queryParam("limit", 5)
               .build())
-          .header("Cookie", "MUSIC_U=" + cookie)
+          .header("Cookie", cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
@@ -198,7 +199,7 @@ public class NeteaseService {
               .queryParam("pid", playlistId)
               .queryParam("tracks", trackIdsParam)
               .build())
-          .header("Cookie", "MUSIC_U=" + cookie)
+          .header("Cookie", cookie)
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
@@ -218,21 +219,21 @@ public class NeteaseService {
 
   public String createPlaylist(String cookie, String playlistName) {
     try {
-      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = webClient
+      NeteasePlaylistDetailResponse response = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/playlist/create")
               .queryParam("name", playlistName)
               .queryParam("privacy", 10) // 10 = private
               .build())
-          .header("Cookie", "MUSIC_U=" + cookie)
+          .header("Cookie", cookie)
           .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {})
+          .bodyToMono(NeteasePlaylistDetailResponse.class)
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
 
-      if (response != null && response.getData() != null && response.getData().getPlaylist() != null) {
-        return response.getData().getPlaylist().getId();
+      if (response != null && response.getPlaylist() != null) {
+        return response.getPlaylist().getId();
       }
 
       throw new RuntimeException("Failed to create NetEase playlist: Invalid response");

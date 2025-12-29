@@ -1,6 +1,7 @@
 package com.spotease.service;
 
 import com.spotease.dto.netease.NeteasePlaylist;
+import com.spotease.dto.netease.NeteasePlaylistDetailResponse;
 import com.spotease.dto.netease.NeteaseResponse;
 import com.spotease.dto.netease.NeteaseTrack;
 import com.spotease.dto.netease.NeteaseUserProfile;
@@ -56,7 +57,7 @@ class NeteaseServiceTest {
   @Test
   void shouldGetPlaylists() {
     // Given
-    String cookie = "test-cookie";
+    String cookie = "MUSIC_U=test-cookie";
     Long userId = 12345L;
 
     // Mock account response
@@ -106,7 +107,7 @@ class NeteaseServiceTest {
 
     // Verify interactions
     verify(webClient, times(2)).get();
-    verify(requestHeadersSpec, times(2)).header("Cookie", "MUSIC_U=" + cookie);
+    verify(requestHeadersSpec, times(2)).header("Cookie", cookie);
   }
 
   @Test
@@ -171,7 +172,7 @@ class NeteaseServiceTest {
   @Test
   void shouldGetPlaylistTracks() {
     // Given
-    String cookie = "test-cookie";
+    String cookie = "MUSIC_U=test-cookie";
     String playlistId = "playlist123";
 
     // Mock track
@@ -191,25 +192,21 @@ class NeteaseServiceTest {
     mockTrack.setAlbum(mockAlbum);
 
     // Mock playlist detail
-    NeteaseResponse.NeteasePlaylistDetail playlistDetail = new NeteaseResponse.NeteasePlaylistDetail();
+    NeteasePlaylistDetailResponse.NeteasePlaylistDetail playlistDetail = new NeteasePlaylistDetailResponse.NeteasePlaylistDetail();
     playlistDetail.setId(playlistId);
     playlistDetail.setTracks(List.of(mockTrack));
 
-    // Mock playlist wrapper
-    NeteaseResponse.NeteasePlaylistWrapper playlistWrapper = new NeteaseResponse.NeteasePlaylistWrapper();
-    playlistWrapper.setPlaylist(playlistDetail);
-
     // Mock response
-    NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = new NeteaseResponse<>();
+    NeteasePlaylistDetailResponse response = new NeteasePlaylistDetailResponse();
     response.setCode(200);
-    response.setData(playlistWrapper);
+    response.setPlaylist(playlistDetail);
 
     // Mock WebClient chain
     when(webClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+    when(responseSpec.bodyToMono(NeteasePlaylistDetailResponse.class))
         .thenReturn(Mono.just(response));
 
     // When
@@ -226,24 +223,24 @@ class NeteaseServiceTest {
 
     // Verify interactions
     verify(webClient).get();
-    verify(requestHeadersSpec).header("Cookie", "MUSIC_U=" + cookie);
+    verify(requestHeadersSpec).header("Cookie", cookie);
   }
 
   @Test
   void shouldReturnEmptyListWhenPlaylistTracksDataIsNull() {
     // Given
-    String cookie = "test-cookie";
+    String cookie = "MUSIC_U=test-cookie";
     String playlistId = "playlist123";
 
-    NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = new NeteaseResponse<>();
+    NeteasePlaylistDetailResponse response = new NeteasePlaylistDetailResponse();
     response.setCode(200);
-    response.setData(null);
+    response.setPlaylist(null);
 
     when(webClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+    when(responseSpec.bodyToMono(NeteasePlaylistDetailResponse.class))
         .thenReturn(Mono.just(response));
 
     // When
@@ -256,14 +253,14 @@ class NeteaseServiceTest {
   @Test
   void shouldThrowExceptionWhenPlaylistTracksResponseIsNull() {
     // Given
-    String cookie = "test-cookie";
+    String cookie = "MUSIC_U=test-cookie";
     String playlistId = "playlist123";
 
     when(webClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class))).thenReturn(Mono.empty());
+    when(responseSpec.bodyToMono(NeteasePlaylistDetailResponse.class)).thenReturn(Mono.empty());
 
     // When / Then
     assertThatThrownBy(() -> neteaseService.getPlaylistTracks(cookie, playlistId))
@@ -274,17 +271,17 @@ class NeteaseServiceTest {
   @Test
   void shouldThrowExceptionWhenPlaylistTracksResponseCodeIsNot200() {
     // Given
-    String cookie = "test-cookie";
+    String cookie = "MUSIC_U=test-cookie";
     String playlistId = "playlist123";
 
-    NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = new NeteaseResponse<>();
+    NeteasePlaylistDetailResponse response = new NeteasePlaylistDetailResponse();
     response.setCode(404);
 
     when(webClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+    when(responseSpec.bodyToMono(NeteasePlaylistDetailResponse.class))
         .thenReturn(Mono.just(response));
 
     // When / Then
@@ -296,7 +293,7 @@ class NeteaseServiceTest {
   @Test
   void shouldSearchTrack() {
     // Given
-    String cookie = "test-cookie";
+    String cookie = "MUSIC_U=test-cookie";
     String query = "test song";
 
     // Mock track
@@ -339,7 +336,7 @@ class NeteaseServiceTest {
 
     // Verify interactions
     verify(webClient).get();
-    verify(requestHeadersSpec).header("Cookie", "MUSIC_U=" + cookie);
+    verify(requestHeadersSpec).header("Cookie", cookie);
   }
 
   @Test
@@ -409,7 +406,7 @@ class NeteaseServiceTest {
   @Test
   void shouldAddTracksToPlaylist() {
     // Given
-    String cookie = "test-cookie";
+    String cookie = "MUSIC_U=test-cookie";
     String playlistId = "playlist123";
     List<String> trackIds = List.of("track1", "track2", "track3");
 
@@ -430,7 +427,7 @@ class NeteaseServiceTest {
 
     // Then
     verify(webClient).get();
-    verify(requestHeadersSpec).header("Cookie", "MUSIC_U=" + cookie);
+    verify(requestHeadersSpec).header("Cookie", cookie);
     verify(responseSpec).bodyToMono(any(ParameterizedTypeReference.class));
   }
 
