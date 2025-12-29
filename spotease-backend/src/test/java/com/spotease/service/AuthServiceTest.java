@@ -1,7 +1,9 @@
 package com.spotease.service;
 
+import com.spotease.dto.AuthStatusResponse;
 import com.spotease.dto.netease.NeteaseQRKey;
 import com.spotease.dto.netease.NeteaseQRStatus;
+import com.spotease.model.User;
 import com.spotease.repository.UserRepository;
 import com.spotease.util.TokenEncryption;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,6 +17,7 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 import se.michaelthelin.spotify.SpotifyApi;
 
+import java.util.Optional;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -121,5 +124,60 @@ class AuthServiceTest {
     assertThat(result.getCode()).isEqualTo(803);
     assertThat(result.getCookie()).isNotNull();
     assertThat(result.getCookie()).contains("MUSIC_U");
+  }
+
+  @Test
+  void testGetUserConnectionStatus_UserNotFound() {
+    // Arrange
+    when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+    // Act
+    AuthStatusResponse result = authService.getUserConnectionStatus(999L);
+
+    // Assert
+    assertThat(result.isAuthenticated()).isFalse();
+    assertThat(result.getUserId()).isNull();
+    assertThat(result.isSpotifyConnected()).isFalse();
+    assertThat(result.isNeteaseConnected()).isFalse();
+  }
+
+  @Test
+  void testGetUserConnectionStatus_SpotifyOnly() {
+    // Arrange
+    User user = new User();
+    user.setId(1L);
+    user.setSpotifyAccessToken("encrypted-token");
+    user.setNeteaseCookie(null);
+
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+    // Act
+    AuthStatusResponse result = authService.getUserConnectionStatus(1L);
+
+    // Assert
+    assertThat(result.isAuthenticated()).isTrue();
+    assertThat(result.getUserId()).isEqualTo(1L);
+    assertThat(result.isSpotifyConnected()).isTrue();
+    assertThat(result.isNeteaseConnected()).isFalse();
+  }
+
+  @Test
+  void testGetUserConnectionStatus_BothPlatforms() {
+    // Arrange
+    User user = new User();
+    user.setId(1L);
+    user.setSpotifyAccessToken("encrypted-token");
+    user.setNeteaseCookie("encrypted-cookie");
+
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+    // Act
+    AuthStatusResponse result = authService.getUserConnectionStatus(1L);
+
+    // Assert
+    assertThat(result.isAuthenticated()).isTrue();
+    assertThat(result.getUserId()).isEqualTo(1L);
+    assertThat(result.isSpotifyConnected()).isTrue();
+    assertThat(result.isNeteaseConnected()).isTrue();
   }
 }

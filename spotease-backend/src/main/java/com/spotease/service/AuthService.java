@@ -1,5 +1,6 @@
 package com.spotease.service;
 
+import com.spotease.dto.AuthStatusResponse;
 import com.spotease.dto.netease.NeteaseQRKey;
 import com.spotease.dto.netease.NeteaseQRStatus;
 import com.spotease.model.User;
@@ -180,5 +181,29 @@ public class AuthService {
       log.error("Failed to process NetEase QR login for user {}: {}", userId, e.getMessage());
       throw new RuntimeException("Failed to process NetEase QR login", e);
     }
+  }
+
+  public AuthStatusResponse getUserConnectionStatus(Long userId) {
+    User user = userRepository.findById(userId).orElse(null);
+
+    if (user == null) {
+      return AuthStatusResponse.builder()
+          .authenticated(false)
+          .spotifyConnected(false)
+          .neteaseConnected(false)
+          .build();
+    }
+
+    boolean spotifyConnected = user.getSpotifyAccessToken() != null
+        && !user.getSpotifyAccessToken().isEmpty();
+    boolean neteaseConnected = user.getNeteaseCookie() != null
+        && !user.getNeteaseCookie().isEmpty();
+
+    return AuthStatusResponse.builder()
+        .authenticated(true)
+        .userId(userId)
+        .spotifyConnected(spotifyConnected)
+        .neteaseConnected(neteaseConnected)
+        .build();
   }
 }
