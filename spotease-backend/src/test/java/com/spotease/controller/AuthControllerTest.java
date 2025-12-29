@@ -141,4 +141,27 @@ class AuthControllerTest {
 
     verifyNoInteractions(authService);
   }
+
+  @Test
+  void testSpotifyCallback_Success_RedirectsToFrontend() throws Exception {
+    // Arrange
+    MockHttpSession session = new MockHttpSession();
+    session.setAttribute("spotify_oauth_state", "test-state");
+
+    User user = new User();
+    user.setId(1L);
+    user.setEmail("test@example.com");
+
+    when(authService.handleSpotifyCallback("test-code")).thenReturn(user);
+
+    // Act & Assert
+    mockMvc.perform(get("/api/auth/spotify/callback")
+            .param("code", "test-code")
+            .param("state", "test-state")
+            .session(session))
+        .andExpect(status().isFound())
+        .andExpect(header().string("Location", "http://127.0.0.1:5173/"));
+
+    verify(authService).handleSpotifyCallback("test-code");
+  }
 }

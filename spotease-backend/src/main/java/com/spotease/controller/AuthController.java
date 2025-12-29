@@ -58,11 +58,10 @@ public class AuthController {
     // Store user in session
     session.setAttribute("userId", user.getId());
 
-    return ResponseEntity.ok(Map.of(
-        "success", true,
-        "userId", user.getId(),
-        "email", user.getEmail()
-    ));
+    // Redirect to frontend
+    return ResponseEntity.status(HttpStatus.FOUND)
+        .header("Location", "http://127.0.0.1:5173/")
+        .build();
   }
 
   @GetMapping("/status")
