@@ -1,5 +1,6 @@
 package com.spotease.controller;
 
+import com.spotease.dto.AuthStatusResponse;
 import com.spotease.dto.NeteaseCookieRequest;
 import com.spotease.dto.netease.NeteaseQRStatus;
 import com.spotease.model.User;
@@ -66,24 +67,18 @@ public class AuthController {
   }
 
   @GetMapping("/status")
-  public ResponseEntity<?> getAuthStatus(HttpSession session) {
+  public ResponseEntity<AuthStatusResponse> getAuthStatus(HttpSession session) {
     Long userId = (Long) session.getAttribute("userId");
 
     if (userId == null) {
-      return ResponseEntity.ok(Map.of(
-          "authenticated", false,
-          "spotifyConnected", false,
-          "neteaseConnected", false
-      ));
+      return ResponseEntity.ok(AuthStatusResponse.builder()
+          .authenticated(false)
+          .spotifyConnected(false)
+          .neteaseConnected(false)
+          .build());
     }
 
-    // In real implementation, fetch user and check token validity
-    return ResponseEntity.ok(Map.of(
-        "authenticated", true,
-        "userId", userId,
-        "spotifyConnected", true,
-        "neteaseConnected", false
-    ));
+    return ResponseEntity.ok(authService.getUserConnectionStatus(userId));
   }
 
   @PostMapping("/logout")

@@ -1,5 +1,6 @@
 package com.spotease.controller;
 
+import com.spotease.dto.AuthStatusResponse;
 import com.spotease.dto.netease.NeteaseQRStatus;
 import com.spotease.model.User;
 import com.spotease.service.AuthService;
@@ -207,5 +208,41 @@ class AuthControllerTest {
         .andExpect(status().isBadRequest());
 
     verifyNoInteractions(authService);
+  }
+
+  @Test
+  void testGetAuthStatus_Unauthenticated() throws Exception {
+    // Act & Assert
+    mockMvc.perform(get("/api/auth/status"))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.authenticated", is(false)))
+        .andExpect(jsonPath("$.spotifyConnected", is(false)))
+        .andExpect(jsonPath("$.neteaseConnected", is(false)));
+
+    verifyNoInteractions(authService);
+  }
+
+  @Test
+  void testGetAuthStatus_AuthenticatedWithSpotify() throws Exception {
+    // Arrange
+    AuthStatusResponse response = AuthStatusResponse.builder()
+        .authenticated(true)
+        .userId(1L)
+        .spotifyConnected(true)
+        .neteaseConnected(false)
+        .build();
+
+    when(authService.getUserConnectionStatus(1L)).thenReturn(response);
+
+    // Act & Assert
+    mockMvc.perform(get("/api/auth/status")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.authenticated", is(true)))
+        .andExpect(jsonPath("$.userId", is(1)))
+        .andExpect(jsonPath("$.spotifyConnected", is(true)))
+        .andExpect(jsonPath("$.neteaseConnected", is(false)));
+
+    verify(authService).getUserConnectionStatus(1L);
   }
 }
