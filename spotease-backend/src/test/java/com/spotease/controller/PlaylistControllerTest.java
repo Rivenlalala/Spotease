@@ -179,4 +179,69 @@ class PlaylistControllerTest {
 
     verifyNoInteractions(neteaseService);
   }
+
+  @Test
+  void testGetPlaylistById_Spotify_Success() throws Exception {
+    // Arrange
+    SpotifyPlaylist playlist = new SpotifyPlaylist();
+    playlist.setId("playlist123");
+    playlist.setName("Test Playlist");
+    playlist.setDescription("Test description");
+    playlist.setTrackCount(42);
+
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    when(tokenEncryption.decrypt("encrypted_spotify_token")).thenReturn("decrypted_token");
+    when(spotifyService.getPlaylistById("decrypted_token", "playlist123")).thenReturn(playlist);
+
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/spotify/playlist123")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id", is("playlist123")))
+        .andExpect(jsonPath("$.name", is("Test Playlist")))
+        .andExpect(jsonPath("$.trackCount", is(42)));
+
+    verify(spotifyService).getPlaylistById("decrypted_token", "playlist123");
+  }
+
+  @Test
+  void testGetPlaylistById_Netease_Success() throws Exception {
+    // Arrange
+    NeteasePlaylist playlist = new NeteasePlaylist();
+    playlist.setId("789");
+    playlist.setName("网易歌单");
+    playlist.setTrackCount(30);
+
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    when(tokenEncryption.decrypt("encrypted_netease_cookie")).thenReturn("decrypted_cookie");
+    when(neteaseService.getPlaylistById("decrypted_cookie", "789")).thenReturn(playlist);
+
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/netease/789")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.id", is("789")))
+        .andExpect(jsonPath("$.name", is("网易歌单")))
+        .andExpect(jsonPath("$.trackCount", is(30)));
+
+    verify(neteaseService).getPlaylistById("decrypted_cookie", "789");
+  }
+
+  @Test
+  void testGetPlaylistById_InvalidPlatform() throws Exception {
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/youtube/123")
+            .session(authenticatedSession))
+        .andExpect(status().isBadRequest());
+
+    verifyNoInteractions(spotifyService);
+    verifyNoInteractions(neteaseService);
+  }
+
+  @Test
+  void testGetPlaylistById_Unauthorized() throws Exception {
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/spotify/123"))
+        .andExpect(status().isUnauthorized());
+  }
 }
