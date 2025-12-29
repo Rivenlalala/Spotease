@@ -188,16 +188,23 @@ class ConversionWorkerTest {
     when(neteaseService.getPlaylistTracks(any(), eq("existing-playlist-id")))
         .thenReturn(List.of(existingTrack));
 
+    // Mock findMatchInExistingTracks to return a match (new optimization path)
     TrackMatch match = new TrackMatch();
     match.setStatus(MatchStatus.AUTO_MATCHED);
     match.setDestinationTrackId("netease-track1");
-    when(matchingService.findBestMatch(any(), any(), any(), any())).thenReturn(match);
+    when(matchingService.findMatchInExistingTracks(any(), any(), any())).thenReturn(match);
 
     // When
     conversionWorker.processConversionJob(1L);
 
     // Then
     verify(neteaseService, never()).addTracksToPlaylist(any(), any(), any());
+
+    // Verify that findMatchInExistingTracks was called (optimization path)
+    verify(matchingService).findMatchInExistingTracks(any(), any(), any());
+
+    // Verify findBestMatch was NOT called (since match was found in existing tracks)
+    verify(matchingService, never()).findBestMatch(any(), any(), any(), any());
 
     // Verify match was saved even though track was skipped
     verify(trackMatchRepository).save(any(TrackMatch.class));

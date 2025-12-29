@@ -58,12 +58,11 @@ public class ConversionWorker {
       log.info("Found {} tracks in source playlist", sourceTracks.size());
 
       // For UPDATE mode, get existing tracks from destination
-      List<String> existingTrackIds = new ArrayList<>();
+      List<?> existingTracks = null;
       if (job.getMode() == ConversionMode.UPDATE) {
-        List<?> existingTracks = getDestinationTracks(job, destToken);
+        existingTracks = getDestinationTracks(job, destToken);
         if (existingTracks != null) {
-          existingTrackIds = extractTrackIds(existingTracks);
-          log.info("Found {} existing tracks in destination playlist", existingTrackIds.size());
+          log.info("Found {} existing tracks in destination playlist", existingTracks.size());
         }
       }
 
@@ -72,9 +71,39 @@ public class ConversionWorker {
 
       for (int i = 0; i < sourceTracks.size(); i++) {
         Object sourceTrack = sourceTracks.get(i);
+        TrackMatch match;
 
-        // Find best match
-        TrackMatch match = matchingService.findBestMatch(
+        // First check if track already exists in destination (UPDATE mode only)
+        if (job.getMode() == ConversionMode.UPDATE && existingTracks != null) {
+          match = matchingService.findMatchInExistingTracks(sourceTrack, existingTracks, job);
+
+          if (match != null) {
+            log.debug("Track already exists in destination playlist (score: {}), skipping API search",
+                match.getMatchConfidence());
+            // Save match and continue - don't add to autoMatchedTrackIds since it already exists
+            trackMatchRepository.save(match);
+
+            // Update counters based on match status
+            job.setProcessedTracks(i + 1);
+            if (match.getStatus() == MatchStatus.AUTO_MATCHED) {
+              job.setHighConfidenceMatches(job.getHighConfidenceMatches() + 1);
+            } else if (match.getStatus() == MatchStatus.PENDING_REVIEW) {
+              job.setLowConfidenceMatches(job.getLowConfidenceMatches() + 1);
+            } else {
+              job.setFailedTracks(job.getFailedTracks() + 1);
+            }
+
+            // Save progress and send update every 5 tracks or on last track
+            if (i % 5 == 0 || i == sourceTracks.size() - 1) {
+              jobRepository.save(job);
+              webSocketService.sendJobUpdate(job);
+            }
+            continue; // Skip to next track
+          }
+        }
+
+        // No existing match found, search for best match via API
+        match = matchingService.findBestMatch(
             sourceTrack,
             job.getDestinationPlatform(),
             destToken,
@@ -89,14 +118,7 @@ public class ConversionWorker {
 
         if (match.getStatus() == MatchStatus.AUTO_MATCHED) {
           job.setHighConfidenceMatches(job.getHighConfidenceMatches() + 1);
-
-          // Skip if already exists in UPDATE mode
-          if (job.getMode() == ConversionMode.UPDATE &&
-              existingTrackIds.contains(match.getDestinationTrackId())) {
-            log.debug("Track {} already exists in destination, skipping", match.getDestinationTrackId());
-          } else {
-            autoMatchedTrackIds.add(match.getDestinationTrackId());
-          }
+          autoMatchedTrackIds.add(match.getDestinationTrackId());
         } else if (match.getStatus() == MatchStatus.PENDING_REVIEW) {
           job.setLowConfidenceMatches(job.getLowConfidenceMatches() + 1);
         } else {
@@ -208,24 +230,4 @@ public class ConversionWorker {
     }
   }
 
-  /**
-   * Extracts track IDs from a list of platform-specific track objects.
-   * Supports both SpotifyTrack and NeteaseTrack objects.
-   *
-   * @param tracks List of track objects (can be SpotifyTrack or NeteaseTrack instances)
-   * @return List of track IDs extracted from the input tracks
-   */
-  private List<String> extractTrackIds(List<?> tracks) {
-    return tracks.stream()
-        .map(track -> {
-          if (track instanceof com.spotease.dto.spotify.SpotifyTrack) {
-            return ((com.spotease.dto.spotify.SpotifyTrack) track).getId();
-          } else if (track instanceof com.spotease.dto.netease.NeteaseTrack) {
-            return ((com.spotease.dto.netease.NeteaseTrack) track).getId();
-          }
-          return null;
-        })
-        .filter(id -> id != null)
-        .toList();
-  }
 }
