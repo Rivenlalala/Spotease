@@ -27,8 +27,21 @@ const ReviewMatches = () => {
 
   // Approve match mutation
   const approveMutation = useMutation({
-    mutationFn: ({ jobId, matchId }: { jobId: number; matchId: number }) =>
-      conversionsApi.approveMatch(jobId, matchId),
+    mutationFn: ({
+      jobId,
+      matchId,
+      alternativeTrack,
+    }: {
+      jobId: number;
+      matchId: number;
+      alternativeTrack?: {
+        destinationTrackId: string;
+        destinationTrackName: string;
+        destinationArtist: string;
+        destinationDuration: number;
+        destinationAlbumImageUrl?: string;
+      };
+    }) => conversionsApi.approveMatch(jobId, matchId, alternativeTrack),
     onSuccess: () => {
       toast({
         title: 'Match approved',
@@ -65,6 +78,11 @@ const ReviewMatches = () => {
     },
   });
 
+  const handleSearch = async (query: string) => {
+    if (!jobId) throw new Error('No job ID');
+    return conversionsApi.searchAlternatives(Number(jobId), query);
+  };
+
   const moveToNext = () => {
     if (matches && currentIndex < matches.length - 1) {
       setCurrentIndex(currentIndex + 1);
@@ -79,9 +97,19 @@ const ReviewMatches = () => {
     }
   };
 
-  const handleApprove = () => {
+  const handleApprove = (alternativeTrack?: {
+    destinationTrackId: string;
+    destinationTrackName: string;
+    destinationArtist: string;
+    destinationDuration: number;
+    destinationAlbumImageUrl?: string;
+  }) => {
     if (!currentMatch || !jobId) return;
-    approveMutation.mutate({ jobId: Number(jobId), matchId: currentMatch.matchId });
+    approveMutation.mutate({
+      jobId: Number(jobId),
+      matchId: currentMatch.matchId,
+      alternativeTrack,
+    });
   };
 
   const handleSkip = () => {
@@ -144,6 +172,7 @@ const ReviewMatches = () => {
             match={currentMatch}
             onApprove={handleApprove}
             onSkip={handleSkip}
+            onSearch={handleSearch}
             isProcessing={isProcessing}
           />
         )}
