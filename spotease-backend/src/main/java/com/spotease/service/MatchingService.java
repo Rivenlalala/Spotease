@@ -276,32 +276,32 @@ public class MatchingService {
     double totalScore = 0.0;
     double totalWeight = 0.0;
 
-    // Duration score (60% weight if present)
-    Integer sourceDuration = getDurationMs(source);
-    Integer candidateDuration = getDurationMs(candidate);
-    if (sourceDuration != null && candidateDuration != null) {
-      double durationScore = scoreDuration(sourceDuration, candidateDuration);
-      totalScore += durationScore * 0.6;
-      totalWeight += 0.6;
-      log.debug("Duration score: {}", durationScore);
-    }
-
-    // Track name score (20% weight, always required)
+    // Track name score (40% weight, always required - most important factor)
     String sourceName = getTrackName(source);
     String candidateName = getTrackName(candidate);
     double nameScore = scoreTrackName(sourceName, candidateName);
-    totalScore += nameScore * 0.2;
-    totalWeight += 0.2;
+    totalScore += nameScore * 0.4;
+    totalWeight += 0.4;
     log.debug("Track name score: {}", nameScore);
 
-    // Artist score (20% weight if present)
+    // Artist score (30% weight if present)
     List<String> sourceArtists = getArtistNames(source);
     List<String> candidateArtists = getArtistNames(candidate);
     if (!sourceArtists.isEmpty() && !candidateArtists.isEmpty()) {
       double artistScore = scoreArtists(sourceArtists, candidateArtists);
-      totalScore += artistScore * 0.2;
-      totalWeight += 0.2;
+      totalScore += artistScore * 0.3;
+      totalWeight += 0.3;
       log.debug("Artist score: {}", artistScore);
+    }
+
+    // Duration score (30% weight if present - used to differentiate versions)
+    Integer sourceDuration = getDurationMs(source);
+    Integer candidateDuration = getDurationMs(candidate);
+    if (sourceDuration != null && candidateDuration != null) {
+      double durationScore = scoreDuration(sourceDuration, candidateDuration);
+      totalScore += durationScore * 0.3;
+      totalWeight += 0.3;
+      log.debug("Duration score: {}", durationScore);
     }
 
     // Normalize to 0.0-1.0 range
@@ -316,7 +316,7 @@ public class MatchingService {
     int candidateSec = candidateMs / 1000;
     int diff = Math.abs(sourceSec - candidateSec);
 
-    if (diff <= 3) {
+    if (diff <= 1) {
       return 1.0;
     } else if (diff <= 10) {
       return 1.0 - ((diff - 3) / 7.0);
