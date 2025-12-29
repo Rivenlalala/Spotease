@@ -162,11 +162,23 @@ public class AuthService {
   }
 
   public User handleNeteaseQRLogin(Long userId, String cookie) {
-    // TODO: Implement NetEase QR login handling
-    // 1. Find user by userId
-    // 2. Extract NetEase user ID from cookie
-    // 3. Store encrypted cookie and NetEase user ID
-    // 4. Return updated user
-    throw new UnsupportedOperationException("NetEase QR login handling not yet implemented");
+    try {
+      log.info("Processing NetEase QR login for user {}", userId);
+
+      User user = userRepository.findById(userId)
+          .orElseThrow(() -> new RuntimeException("User not found"));
+
+      // Store the encrypted cookie
+      String encryptedCookie = tokenEncryption.encrypt(cookie);
+      user.setNeteaseCookie(encryptedCookie);
+
+      // Set expiry (NetEase cookies typically valid for ~1 year, we'll use 30 days to be safe)
+      user.setNeteaseCookieExpiry(LocalDateTime.now().plusDays(30));
+
+      return userRepository.save(user);
+    } catch (Exception e) {
+      log.error("Failed to process NetEase QR login for user {}: {}", userId, e.getMessage());
+      throw new RuntimeException("Failed to process NetEase QR login", e);
+    }
   }
 }
