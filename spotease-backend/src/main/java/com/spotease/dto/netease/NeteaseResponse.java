@@ -2,6 +2,7 @@ package com.spotease.dto.netease;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 
@@ -36,6 +37,7 @@ public class NeteaseResponse<T> {
   }
 
   @Data
+  @EqualsAndHashCode(callSuper = true)
   @JsonIgnoreProperties(ignoreUnknown = true)
   public static class NeteasePlaylistDetail extends NeteasePlaylist {
     private List<NeteaseTrack> tracks;
