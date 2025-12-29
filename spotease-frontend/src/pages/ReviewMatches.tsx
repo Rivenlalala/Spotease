@@ -81,12 +81,12 @@ const ReviewMatches = () => {
 
   const handleApprove = () => {
     if (!currentMatch || !jobId) return;
-    approveMutation.mutate({ jobId: Number(jobId), matchId: currentMatch.id });
+    approveMutation.mutate({ jobId: Number(jobId), matchId: currentMatch.matchId });
   };
 
   const handleSkip = () => {
     if (!currentMatch || !jobId) return;
-    skipMutation.mutate({ jobId: Number(jobId), matchId: currentMatch.id });
+    skipMutation.mutate({ jobId: Number(jobId), matchId: currentMatch.matchId });
   };
 
   const isProcessing = approveMutation.isPending || skipMutation.isPending;
