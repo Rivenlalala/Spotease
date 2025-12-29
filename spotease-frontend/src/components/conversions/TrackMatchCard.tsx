@@ -301,25 +301,38 @@ const TrackMatchCard = ({ match, onApprove, onSkip, onSearch, isProcessing = fal
         )}
 
         {/* Actions */}
-        <div className="flex gap-4">
-          <Button
-            onClick={onSkip}
-            variant="outline"
-            className="flex-1"
-            disabled={isProcessing}
-          >
-            <X className="w-4 h-4 mr-2" />
-            Skip
-          </Button>
-          <Button
-            onClick={onApprove}
-            className="flex-1"
-            disabled={isProcessing || !match.destinationTrackId}
-          >
-            <Check className="w-4 h-4 mr-2" />
-            Approve Match
-          </Button>
-        </div>
+        {!isSearching && (
+          <div className="space-y-3">
+            <Button
+              onClick={handleOpenSearch}
+              variant="outline"
+              className="w-full"
+              disabled={isProcessing}
+            >
+              <Search className="w-4 h-4 mr-2" />
+              Search Alternative
+            </Button>
+            <div className="flex gap-4">
+              <Button
+                onClick={onSkip}
+                variant="outline"
+                className="flex-1"
+                disabled={isProcessing}
+              >
+                <X className="w-4 h-4 mr-2" />
+                Skip
+              </Button>
+              <Button
+                onClick={handleApprove}
+                className="flex-1"
+                disabled={isProcessing || (!match.destinationTrackId && !selectedTrack)}
+              >
+                <Check className="w-4 h-4 mr-2" />
+                Approve Match
+              </Button>
+            </div>
+          </div>
+        )}
       </CardContent>
     </Card>
   );
