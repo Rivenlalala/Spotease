@@ -2,6 +2,7 @@ package com.spotease.service;
 
 import com.spotease.dto.netease.NeteasePlaylist;
 import com.spotease.dto.netease.NeteasePlaylistDetailResponse;
+import com.spotease.dto.netease.NeteasePlaylistTracksResponse;
 import com.spotease.dto.netease.NeteaseResponse;
 import com.spotease.dto.netease.NeteaseTrack;
 import jakarta.annotation.PostConstruct;
@@ -191,7 +192,7 @@ public class NeteaseService {
     try {
       String trackIdsParam = String.join(",", trackIds);
 
-      NeteaseResponse<Void> response = webClient
+      NeteasePlaylistTracksResponse response = webClient
           .get()
           .uri(uriBuilder -> uriBuilder
               .path("/playlist/tracks")
@@ -201,7 +202,7 @@ public class NeteaseService {
               .build())
           .header("Cookie", cookie)
           .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
+          .bodyToMono(NeteasePlaylistTracksResponse.class)
           .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
           .block();
 
@@ -209,8 +210,10 @@ public class NeteaseService {
       if (response == null) {
         throw new RuntimeException("Add tracks response is null");
       }
-      if (response.getCode() != 200) {
-        throw new RuntimeException("NetEase API returned error code: " + response.getCode());
+      if (!response.isSuccess()) {
+        Integer status = response.getStatus();
+        Integer code = response.getBody() != null ? response.getBody().getCode() : null;
+        throw new RuntimeException("NetEase API returned error: status=" + status + ", code=" + code);
       }
     } catch (Exception e) {
       throw new RuntimeException("Failed to add tracks to playlist", e);
