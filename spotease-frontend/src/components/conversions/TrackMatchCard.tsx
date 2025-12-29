@@ -89,6 +89,21 @@ const TrackMatchCard = ({ match, onApprove, onSkip, onSearch, isProcessing = fal
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const SearchResultSkeleton = () => (
+    <div className="space-y-2">
+      {[...Array(5)].map((_, i) => (
+        <div key={i} className="flex items-center gap-3 p-2 rounded-lg animate-pulse">
+          <div className="w-12 h-12 bg-gray-300 rounded flex-shrink-0" />
+          <div className="flex-1 min-w-0">
+            <div className="h-4 bg-gray-300 rounded w-3/4 mb-2" />
+            <div className="h-3 bg-gray-200 rounded w-1/2" />
+          </div>
+          <div className="h-4 bg-gray-200 rounded w-10" />
+        </div>
+      ))}
+    </div>
+  );
+
   const getConfidenceColor = (confidence: number) => {
     if (confidence >= 0.85) return 'text-green-600';
     if (confidence >= 0.60) return 'text-orange-600';
