@@ -19,6 +19,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -253,6 +254,53 @@ class ReviewControllerTest {
         eq("decrypted_access_token"),
         eq("spotify-playlist-789"),
         eq(List.of("spotify:track:netease-track-1"))
+    );
+  }
+
+  @Test
+  void shouldApproveMatchWithAlternativeDestination() throws Exception {
+    // Given: Failed match with no destination
+    failedMatch.setDestinationTrackId(null);
+    failedMatch.setDestinationTrackName(null);
+    failedMatch.setDestinationArtist(null);
+    failedMatch.setStatus(MatchStatus.FAILED);
+
+    when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+    when(matchRepository.findById(2L)).thenReturn(Optional.of(failedMatch));
+    when(tokenEncryption.decrypt("encrypted_cookie")).thenReturn("decrypted_cookie");
+
+    String requestBody = """
+        {
+          "destinationTrackId": "alt-netease-track-123",
+          "destinationTrackName": "Alternative Track",
+          "destinationArtist": "Alternative Artist",
+          "destinationDuration": 240
+        }
+        """;
+
+    // When & Then
+    mockMvc.perform(post("/api/conversions/1/matches/2/approve")
+            .session(authenticatedSession)
+            .contentType(MediaType.APPLICATION_JSON)
+            .content(requestBody))
+        .andExpect(status().isOk());
+
+    // Verify match was updated with new destination
+    ArgumentCaptor<TrackMatch> matchCaptor = ArgumentCaptor.forClass(TrackMatch.class);
+    verify(matchRepository).save(matchCaptor.capture());
+    TrackMatch savedMatch = matchCaptor.getValue();
+    assertEquals("alt-netease-track-123", savedMatch.getDestinationTrackId());
+    assertEquals("Alternative Track", savedMatch.getDestinationTrackName());
+    assertEquals("Alternative Artist", savedMatch.getDestinationArtist());
+    assertEquals(240, savedMatch.getDestinationDuration());
+    assertEquals(1.0, savedMatch.getMatchConfidence());
+    assertEquals(MatchStatus.USER_APPROVED, savedMatch.getStatus());
+
+    // Verify track was added to NetEase playlist with new ID
+    verify(neteaseService).addTracksToPlaylist(
+        eq("decrypted_cookie"),
+        eq("netease-playlist-456"),
+        eq(List.of("alt-netease-track-123"))
     );
   }
 
