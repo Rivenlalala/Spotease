@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/hooks/useAuth';
-import { useWebSocket } from '@/hooks/useWebSocket';
+import { useWebSocket, type JobUpdate } from '@/hooks/useWebSocket';
 import { conversionsApi } from '@/api/conversions';
 import type { ConversionJob } from '@/types/conversion';
 import Layout from '@/components/layout/Layout';
@@ -26,17 +26,20 @@ const Dashboard = () => {
   // WebSocket for real-time updates
   useWebSocket({
     enabled: authStatus?.authenticated === true,
-    onJobUpdate: (updatedJob) => {
-      // Update the job in the cache
+    onJobUpdate: (update: JobUpdate) => {
+      // Update the job in the cache by merging the partial update
       queryClient.setQueryData(['conversions'], (oldJobs: ConversionJob[] | undefined) => {
-        if (!oldJobs) return [updatedJob];
+        if (!oldJobs) return oldJobs;
         return oldJobs.map((job: ConversionJob) =>
-          job.id === updatedJob.id ? updatedJob : job
+          job.id === update.id ? { ...job, ...update } : job
         );
       });
 
       // Also update individual job cache if it exists
-      queryClient.setQueryData(['conversion', updatedJob.id], updatedJob);
+      queryClient.setQueryData(['conversion', update.id], (oldJob: ConversionJob | undefined) => {
+        if (!oldJob) return oldJob;
+        return { ...oldJob, ...update };
+      });
     },
   });
 
