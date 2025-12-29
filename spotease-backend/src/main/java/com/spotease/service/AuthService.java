@@ -17,6 +17,7 @@ import se.michaelthelin.spotify.requests.authorization.authorization_code.Author
 import se.michaelthelin.spotify.requests.authorization.authorization_code.AuthorizationCodeUriRequest;
 import se.michaelthelin.spotify.requests.data.users_profile.GetCurrentUsersProfileRequest;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 
 @Service
@@ -121,6 +122,7 @@ public class AuthService {
           .uri("/login/qr/key")
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseQRKey>() {})
+          .timeout(Duration.ofSeconds(10))
           .block();
 
       if (response == null || response.getCode() != 200 || response.getData() == null) {
@@ -145,6 +147,7 @@ public class AuthService {
               .build())
           .retrieve()
           .bodyToMono(new ParameterizedTypeReference<NeteaseQRStatus>() {})
+          .timeout(Duration.ofSeconds(10))
           .block();
 
       if (response == null) {
