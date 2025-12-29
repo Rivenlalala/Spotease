@@ -411,15 +411,21 @@ class NeteaseServiceTest {
     List<String> trackIds = List.of("track1", "track2", "track3");
 
     // Mock response
-    NeteaseResponse<Void> response = new NeteaseResponse<>();
-    response.setCode(200);
+    com.spotease.dto.netease.NeteasePlaylistTracksResponse response =
+        new com.spotease.dto.netease.NeteasePlaylistTracksResponse();
+    response.setStatus(200);
+
+    com.spotease.dto.netease.NeteasePlaylistTracksResponse.Body body =
+        new com.spotease.dto.netease.NeteasePlaylistTracksResponse.Body();
+    body.setCode(200);
+    response.setBody(body);
 
     // Mock WebClient chain
     when(webClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+    when(responseSpec.bodyToMono(com.spotease.dto.netease.NeteasePlaylistTracksResponse.class))
         .thenReturn(Mono.just(response));
 
     // When
@@ -428,7 +434,7 @@ class NeteaseServiceTest {
     // Then
     verify(webClient).get();
     verify(requestHeadersSpec).header("Cookie", cookie);
-    verify(responseSpec).bodyToMono(any(ParameterizedTypeReference.class));
+    verify(responseSpec).bodyToMono(com.spotease.dto.netease.NeteasePlaylistTracksResponse.class);
   }
 
   @Test
@@ -442,7 +448,8 @@ class NeteaseServiceTest {
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class))).thenReturn(Mono.empty());
+    when(responseSpec.bodyToMono(com.spotease.dto.netease.NeteasePlaylistTracksResponse.class))
+        .thenReturn(Mono.empty());
 
     // When / Then
     assertThatThrownBy(() -> neteaseService.addTracksToPlaylist(cookie, playlistId, trackIds))
@@ -457,14 +464,20 @@ class NeteaseServiceTest {
     String playlistId = "playlist123";
     List<String> trackIds = List.of("track1");
 
-    NeteaseResponse<Void> response = new NeteaseResponse<>();
-    response.setCode(403);
+    com.spotease.dto.netease.NeteasePlaylistTracksResponse response =
+        new com.spotease.dto.netease.NeteasePlaylistTracksResponse();
+    response.setStatus(200);
+
+    com.spotease.dto.netease.NeteasePlaylistTracksResponse.Body body =
+        new com.spotease.dto.netease.NeteasePlaylistTracksResponse.Body();
+    body.setCode(403);
+    response.setBody(body);
 
     when(webClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.header(anyString(), anyString())).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
-    when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
+    when(responseSpec.bodyToMono(com.spotease.dto.netease.NeteasePlaylistTracksResponse.class))
         .thenReturn(Mono.just(response));
 
     // When / Then
