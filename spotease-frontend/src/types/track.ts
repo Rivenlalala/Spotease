@@ -13,6 +13,7 @@ export interface Track {
   album?: string;
   duration: number;
   isrc?: string;
+  imageUrl?: string;
 }
 
 export interface TrackMatch {
@@ -23,10 +24,12 @@ export interface TrackMatch {
   sourceAlbum?: string;
   sourceDuration: number;
   sourceISRC?: string;
+  sourceImageUrl?: string;
   destinationTrackId?: string;
   destinationTrackName?: string;
   destinationArtist?: string;
   destinationDuration?: number;
+  destinationImageUrl?: string;
   matchConfidence: number;
   status: MatchStatus;
   errorMessage?: string;
