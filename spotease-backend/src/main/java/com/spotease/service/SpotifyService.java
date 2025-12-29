@@ -5,6 +5,7 @@ import com.spotease.dto.spotify.SpotifyTrack;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import se.michaelthelin.spotify.SpotifyApi;
+import se.michaelthelin.spotify.model_objects.specification.Image;
 import se.michaelthelin.spotify.model_objects.specification.Paging;
 import se.michaelthelin.spotify.model_objects.specification.Playlist;
 import se.michaelthelin.spotify.model_objects.specification.PlaylistSimplified;
@@ -42,6 +43,39 @@ public class SpotifyService {
         .setRedirectUri(spotifyApi.getRedirectURI())
         .setAccessToken(accessToken)
         .build();
+  }
+
+  /**
+   * Select a medium-sized image (~300px) from an array of Spotify images.
+   * Spotify typically returns images sorted by size: [640x640, 300x300, 64x64]
+   *
+   * @param images array of Spotify Image objects
+   * @return URL of the medium-sized image, or null if no images available
+   */
+  protected String selectMediumImage(Image[] images) {
+    if (images == null || images.length == 0) {
+      return null;
+    }
+
+    // If we have 3+ images, the middle one is typically 300x300
+    if (images.length >= 3) {
+      return images[1].getUrl();
+    }
+
+    // Otherwise find the image closest to 300px width
+    Image closest = images[0];
+    int targetWidth = 300;
+    int minDiff = Math.abs(images[0].getWidth() - targetWidth);
+
+    for (Image image : images) {
+      int diff = Math.abs(image.getWidth() - targetWidth);
+      if (diff < minDiff) {
+        minDiff = diff;
+        closest = image;
+      }
+    }
+
+    return closest.getUrl();
   }
 
   public List<SpotifyPlaylist> getPlaylists(String accessToken) {

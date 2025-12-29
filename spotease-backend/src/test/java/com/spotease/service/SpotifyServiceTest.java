@@ -16,6 +16,7 @@ import se.michaelthelin.spotify.requests.data.playlists.GetPlaylistsItemsRequest
 import se.michaelthelin.spotify.requests.data.search.simplified.SearchTracksRequest;
 
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -36,7 +37,8 @@ class SpotifyServiceTest {
   @BeforeEach
   void setUp() {
     // Mock the createAuthenticatedApi method to return our mock
-    doReturn(authenticatedApi).when(spotifyService).createAuthenticatedApi(anyString());
+    // Use lenient() because not all tests use this stub (e.g., selectMediumImage tests)
+    lenient().doReturn(authenticatedApi).when(spotifyService).createAuthenticatedApi(anyString());
   }
 
   @Test
@@ -109,5 +111,79 @@ class SpotifyServiceTest {
     assertThat(result.get(0).getId()).isEqualTo("track123");
     assertThat(result.get(0).getName()).isEqualTo("Test Track");
     assertThat(result.get(0).getArtists()).containsExactly("Test Artist");
+  }
+
+  @Test
+  void shouldSelectMediumImageFromMultiple() {
+    // Given - with 3+ images, selectMediumImage takes the middle one
+    Image medium = mock(Image.class);
+    when(medium.getUrl()).thenReturn("http://medium.jpg");
+
+    Image[] images = {mock(Image.class), medium, mock(Image.class)};
+
+    // When - directly call the method, no API auth needed
+    SpotifyService service = new SpotifyService(spotifyApi);
+    String result = service.selectMediumImage(images);
+
+    // Then
+    assertThat(result).isEqualTo("http://medium.jpg");
+  }
+
+  @Test
+  void shouldReturnNullForEmptyImageArray() {
+    // When
+    SpotifyService service = new SpotifyService(spotifyApi);
+    String result = service.selectMediumImage(new Image[0]);
+
+    // Then
+    assertThat(result).isNull();
+  }
+
+  @Test
+  void shouldReturnNullForNullImageArray() {
+    // When
+    SpotifyService service = new SpotifyService(spotifyApi);
+    String result = service.selectMediumImage(null);
+
+    // Then
+    assertThat(result).isNull();
+  }
+
+  @Test
+  void shouldSelectMiddleImageWhenThreeOrMore() {
+    // Given
+    Image img2 = mock(Image.class);
+    when(img2.getUrl()).thenReturn("http://second.jpg");
+
+    Image[] images = {mock(Image.class), img2, mock(Image.class)};
+
+    // When
+    SpotifyService service = new SpotifyService(spotifyApi);
+    String result = service.selectMediumImage(images);
+
+    // Then
+    assertThat(result).isEqualTo("http://second.jpg");
+  }
+
+  @Test
+  void shouldSelectClosestTo300pxWhenLessThanThreeImages() {
+    // Given - with fewer than 3 images, it finds the closest to 300px
+    // 64 is 236 away from 300, 640 is 340 away from 300, so small wins
+    Image small = mock(Image.class);
+    lenient().when(small.getWidth()).thenReturn(64);
+    lenient().when(small.getUrl()).thenReturn("http://small.jpg");
+
+    Image large = mock(Image.class);
+    lenient().when(large.getWidth()).thenReturn(640);
+    lenient().when(large.getUrl()).thenReturn("http://large.jpg");
+
+    Image[] images = {large, small};
+
+    // When
+    SpotifyService service = new SpotifyService(spotifyApi);
+    String result = service.selectMediumImage(images);
+
+    // Then
+    assertThat(result).isEqualTo("http://small.jpg");
   }
 }
