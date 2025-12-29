@@ -12,9 +12,8 @@ export interface SpotifyLoginResponse {
 }
 
 export interface NeteaseQRResponse {
-  message: string;
   qrKey: string;
-  qrImage: string;
+  qrUrl: string;
 }
 
 export interface NeteaseQRStatusResponse {

@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Dialog,
   DialogContent,
@@ -18,7 +19,7 @@ interface NeteaseQRModalProps {
 }
 
 const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
-  const [qrImage, setQrImage] = useState<string>("");
+  const [qrUrl, setQrUrl] = useState<string>("");
   const [qrKey, setQrKey] = useState<string>("");
   const [status, setStatus] = useState<"loading" | "ready" | "scanning" | "success" | "error">("loading");
   const [showManualInput, setShowManualInput] = useState(false);
@@ -31,7 +32,7 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
     try {
       setStatus("loading");
       const response = await authApi.generateNeteaseQR();
-      setQrImage(response.qrImage);
+      setQrUrl(response.qrUrl);
       setQrKey(response.qrKey);
       setStatus("ready");
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -129,16 +130,16 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
             </div>
           )}
 
-          {status === "ready" && qrImage && (
+          {status === "ready" && qrUrl && (
             <>
-              <img src={qrImage} alt="NetEase QR Code" className="w-64 h-64" />
+              <QRCodeSVG value={qrUrl} size={256} />
               <p className="text-sm text-gray-600">Waiting for scan...</p>
             </>
           )}
 
-          {status === "scanning" && qrImage && (
+          {status === "scanning" && qrUrl && (
             <>
-              <img src={qrImage} alt="NetEase QR Code" className="w-64 h-64" />
+              <QRCodeSVG value={qrUrl} size={256} />
               <p className="text-sm text-green-600 font-medium">QR code scanned! Waiting for confirmation...</p>
             </>
           )}
