@@ -12,4 +12,9 @@ public class NeteasePlaylist {
   private Integer totalTracks;
   private String coverImgUrl;
   private Long userId;
+
+  // Normalized getter for naming consistency with SpotifyPlaylist
+  public String getCoverImageUrl() {
+    return coverImgUrl;
+  }
 }
