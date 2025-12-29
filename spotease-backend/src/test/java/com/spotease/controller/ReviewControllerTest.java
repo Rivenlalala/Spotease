@@ -2,6 +2,8 @@ package com.spotease.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotease.dto.TrackMatchDto;
+import com.spotease.dto.netease.NeteaseTrack;
+import com.spotease.dto.spotify.SpotifyTrack;
 import com.spotease.model.*;
 import com.spotease.repository.ConversionJobRepository;
 import com.spotease.repository.TrackMatchRepository;
@@ -401,5 +403,94 @@ class ReviewControllerTest {
     verify(jobRepository).findById(1L);
     verify(matchRepository).findById(999L);
     verify(matchRepository, never()).save(any());
+  }
+
+  @Test
+  void testManualSearch_Spotify_Success() throws Exception {
+    // Arrange
+    User user = new User();
+    user.setId(1L);
+    user.setSpotifyAccessToken("encrypted_token");
+
+    ConversionJob job = new ConversionJob();
+    job.setId(1L);
+    job.setUser(user);
+    job.setDestinationPlatform(Platform.SPOTIFY);
+
+    SpotifyTrack track1 = new SpotifyTrack();
+    track1.setId("track1");
+    track1.setName("Test Song");
+    track1.setArtists(Arrays.asList("Artist 1"));
+
+    SpotifyTrack track2 = new SpotifyTrack();
+    track2.setId("track2");
+    track2.setName("Another Song");
+    track2.setArtists(Arrays.asList("Artist 2"));
+
+    when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+    when(tokenEncryption.decrypt("encrypted_token")).thenReturn("decrypted_token");
+    when(spotifyService.searchTrack("decrypted_token", "test query"))
+        .thenReturn(Arrays.asList(track1, track2));
+
+    // Act & Assert
+    mockMvc.perform(get("/api/conversions/1/matches/search")
+            .param("query", "test query")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(2)))
+        .andExpect(jsonPath("$[0].id", is("track1")))
+        .andExpect(jsonPath("$[0].name", is("Test Song")))
+        .andExpect(jsonPath("$[1].id", is("track2")));
+
+    verify(spotifyService).searchTrack("decrypted_token", "test query");
+  }
+
+  @Test
+  void testManualSearch_Netease_Success() throws Exception {
+    // Arrange
+    User user = new User();
+    user.setId(1L);
+    user.setNeteaseCookie("encrypted_cookie");
+
+    ConversionJob job = new ConversionJob();
+    job.setId(1L);
+    job.setUser(user);
+    job.setDestinationPlatform(Platform.NETEASE);
+
+    NeteaseTrack track1 = new NeteaseTrack();
+    track1.setId("123");
+    track1.setName("测试歌曲");
+
+    when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+    when(tokenEncryption.decrypt("encrypted_cookie")).thenReturn("decrypted_cookie");
+    when(neteaseService.searchTrack("decrypted_cookie", "测试"))
+        .thenReturn(Arrays.asList(track1));
+
+    // Act & Assert
+    mockMvc.perform(get("/api/conversions/1/matches/search")
+            .param("query", "测试")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(1)))
+        .andExpect(jsonPath("$[0].id", is("123")))
+        .andExpect(jsonPath("$[0].name", is("测试歌曲")));
+
+    verify(neteaseService).searchTrack("decrypted_cookie", "测试");
+  }
+
+  @Test
+  void testManualSearch_MissingQuery() throws Exception {
+    // Act & Assert
+    mockMvc.perform(get("/api/conversions/1/matches/search")
+            .session(authenticatedSession))
+        .andExpect(status().isBadRequest());
+  }
+
+  @Test
+  void testManualSearch_Unauthorized() throws Exception {
+    // Act & Assert
+    mockMvc.perform(get("/api/conversions/1/matches/search")
+            .param("query", "test"))
+        .andExpect(status().isUnauthorized());
   }
 }
