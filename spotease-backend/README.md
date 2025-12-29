@@ -225,6 +225,77 @@ TrackMatch match = matchingService.findBestMatch(
 - End-to-end testing
 - Production deployment
 
+## CORS Configuration
+
+### Overview
+
+Spotease uses profile-based CORS configuration with explicit origin whitelisting to support cross-origin requests from the frontend while maintaining security.
+
+### Configuration Files
+
+- **Production:** `application.yml` - Default origin: `https://spotease.rivenlalala.xyz`
+- **Development:** `application-dev.yml` - Local origin: `http://127.0.0.1:5173`
+
+### Environment Variables
+
+Override CORS origins using:
+```bash
+CORS_ALLOWED_ORIGINS=https://spotease.rivenlalala.xyz
+```
+
+Supports multiple origins (comma-separated):
+```bash
+CORS_ALLOWED_ORIGINS=https://spotease.rivenlalala.xyz,https://app.spotease.com
+```
+
+### Security Settings (Hardcoded)
+
+- **Allowed Methods:** GET, POST, PUT, PATCH, DELETE, OPTIONS
+- **Allowed Headers:** Content-Type, Authorization, Accept, X-Requested-With
+- **Credentials:** Enabled (supports session cookies)
+- **Max Age:** 3600 seconds (1 hour preflight cache)
+
+### Session Cookie Configuration
+
+**Production:**
+- `SameSite`: Lax (allows OAuth redirects)
+- `Secure`: true (HTTPS only)
+- `HttpOnly`: true (XSS protection)
+- `Domain`: .rivenlalala.xyz (shared across subdomains)
+
+**Development:**
+- `Secure`: false (allows HTTP)
+- No domain setting (works with 127.0.0.1)
+
+### Testing CORS Locally
+
+```bash
+# Start backend with dev profile
+mvn spring-boot:run -Dspring-boot.run.profiles=dev
+
+# Test CORS preflight in another terminal
+curl -X OPTIONS http://127.0.0.1:8080/api/health \
+  -H "Origin: http://127.0.0.1:5173" \
+  -H "Access-Control-Request-Method: GET" \
+  -v
+```
+
+**Expected:** CORS headers in response:
+- `Access-Control-Allow-Origin: http://127.0.0.1:5173`
+- `Access-Control-Allow-Credentials: true`
+
+### Troubleshooting
+
+**CORS headers not appearing:**
+- Verify profile is active: Look for "The following profiles are active: dev"
+- Check CORS origins match exactly (including protocol)
+
+**Cookies not sent from frontend:**
+- Ensure `credentials: 'include'` in fetch calls
+- Verify `secure: false` in development profile
+
+See `docs/plans/2025-12-29-cors-configuration-design.md` for complete design documentation.
+
 ## License
 
 MIT
