@@ -37,7 +37,27 @@ const TrackMatchCard = ({ match, onApprove, onSkip, isProcessing = false }: Trac
         <div className="bg-blue-50 rounded-lg p-4">
           <h3 className="text-sm font-semibold text-blue-900 mb-2">Source Track</h3>
           <div className="flex items-start gap-3">
-            <div className="w-12 h-12 bg-blue-200 rounded flex items-center justify-center flex-shrink-0">
+            {match.sourceImageUrl ? (
+              <img
+                src={match.sourceImageUrl}
+                alt={match.sourceTrackName}
+                className="w-12 h-12 rounded object-cover flex-shrink-0"
+                onError={(e) => {
+                  e.currentTarget.style.display = 'none';
+                  const fallback = e.currentTarget.nextElementSibling;
+                  if (fallback) {
+                    fallback.classList.remove('hidden');
+                  }
+                }}
+              />
+            ) : null}
+            <div
+              className={
+                match.sourceImageUrl
+                  ? 'hidden w-12 h-12 bg-blue-200 rounded flex items-center justify-center flex-shrink-0'
+                  : 'w-12 h-12 bg-blue-200 rounded flex items-center justify-center flex-shrink-0'
+              }
+            >
               <Music className="w-6 h-6 text-blue-600" />
             </div>
             <div className="flex-1 min-w-0">
@@ -68,7 +88,27 @@ const TrackMatchCard = ({ match, onApprove, onSkip, isProcessing = false }: Trac
           <div className="bg-green-50 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-green-900 mb-2">Suggested Match</h3>
             <div className="flex items-start gap-3">
-              <div className="w-12 h-12 bg-green-200 rounded flex items-center justify-center flex-shrink-0">
+              {match.destinationImageUrl ? (
+                <img
+                  src={match.destinationImageUrl}
+                  alt={match.destinationTrackName || 'Track'}
+                  className="w-12 h-12 rounded object-cover flex-shrink-0"
+                  onError={(e) => {
+                    e.currentTarget.style.display = 'none';
+                    const fallback = e.currentTarget.nextElementSibling;
+                    if (fallback) {
+                      fallback.classList.remove('hidden');
+                    }
+                  }}
+                />
+              ) : null}
+              <div
+                className={
+                  match.destinationImageUrl
+                    ? 'hidden w-12 h-12 bg-green-200 rounded flex items-center justify-center flex-shrink-0'
+                    : 'w-12 h-12 bg-green-200 rounded flex items-center justify-center flex-shrink-0'
+                }
+              >
                 <Music className="w-6 h-6 text-green-600" />
               </div>
               <div className="flex-1 min-w-0">
