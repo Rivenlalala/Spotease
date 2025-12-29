@@ -20,10 +20,57 @@ public class MatchingService {
 
   private static final double AUTO_MATCH_THRESHOLD = 0.85;
   private static final double REVIEW_THRESHOLD = 0.60;
+  private static final double EXISTING_TRACK_THRESHOLD = 0.30;
   private static final int MAX_SEARCH_RESULTS = 5;
 
   private final SpotifyService spotifyService;
   private final NeteaseService neteaseService;
+
+  /**
+   * Check if source track matches any existing tracks in destination playlist.
+   * If match score >= 0.30, returns the match without doing an API search.
+   *
+   * @param sourceTrack the source track (SpotifyTrack or NeteaseTrack)
+   * @param existingTracks list of tracks already in the destination playlist
+   * @param job the conversion job
+   * @return TrackMatch if found with score >= 0.30, null otherwise
+   */
+  public TrackMatch findMatchInExistingTracks(
+      Object sourceTrack,
+      List<?> existingTracks,
+      ConversionJob job
+  ) {
+    if (existingTracks == null || existingTracks.isEmpty()) {
+      return null;
+    }
+
+    String trackName = getTrackName(sourceTrack);
+    String sourceTrackId = getTrackId(sourceTrack);
+
+    log.debug("Checking {} existing tracks for match to: {}", existingTracks.size(), trackName);
+
+    // Score all existing tracks and select best
+    double bestScore = 0.0;
+    Object bestCandidate = null;
+
+    for (Object candidate : existingTracks) {
+      double score = scoreCandidate(sourceTrack, candidate);
+      if (score > bestScore) {
+        bestScore = score;
+        bestCandidate = candidate;
+      }
+    }
+
+    // Only return match if score meets threshold
+    if (bestScore >= EXISTING_TRACK_THRESHOLD) {
+      MatchStatus status = determineStatus(bestScore);
+      log.info("Found existing track match with confidence {}: {}", bestScore, getTrackName(bestCandidate));
+      return createTrackMatch(job, sourceTrack, bestCandidate, bestScore, status);
+    }
+
+    log.debug("No existing track match found (best score: {})", bestScore);
+    return null;
+  }
 
   /**
    * Find the best match for a source track on the destination platform.
@@ -115,14 +162,16 @@ public class MatchingService {
    * @param accessToken the access token
    * @param query the search query
    * @param platform the platform to search on
-   * @return list of search results
+   * @return list of search results (never null)
    */
   private List<?> executeSearch(String accessToken, String query, Platform platform) {
+    List<?> results;
     if (platform == Platform.NETEASE) {
-      return neteaseService.searchTrack(query, accessToken);
+      results = neteaseService.searchTrack(accessToken, query);
     } else {
-      return spotifyService.searchTrack(accessToken, query);
+      results = spotifyService.searchTrack(accessToken, query);
     }
+    return results != null ? results : List.of();
   }
 
   /**
