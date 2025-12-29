@@ -1,6 +1,6 @@
 import apiClient from "./client";
 import type { ConversionJob, CreateConversionRequest } from "@/types/conversion";
-import type { TrackMatch } from "@/types/track";
+import type { SearchTrack, TrackMatch } from "@/types/track";
 
 export const conversionsApi = {
   // Create new conversion job
@@ -42,10 +42,21 @@ export const conversionsApi = {
     return response.data;
   },
 
-  // Approve a match
-  approveMatch: async (jobId: number, matchId: number): Promise<void> => {
+  // Approve a match (optionally with alternative destination)
+  approveMatch: async (
+    jobId: number,
+    matchId: number,
+    alternativeTrack?: {
+      destinationTrackId: string;
+      destinationTrackName: string;
+      destinationArtist: string;
+      destinationDuration: number;
+      destinationAlbumImageUrl?: string;
+    }
+  ): Promise<void> => {
     await apiClient.post(
-      `/api/conversions/${jobId}/matches/${matchId}/approve`
+      `/api/conversions/${jobId}/matches/${matchId}/approve`,
+      alternativeTrack || {}
     );
   },
 
@@ -54,15 +65,14 @@ export const conversionsApi = {
     await apiClient.post(`/api/conversions/${jobId}/matches/${matchId}/skip`);
   },
 
-  // Search for alternative matches
+  // Search for alternative matches on destination platform
   searchAlternatives: async (
     jobId: number,
-    matchId: number,
     query: string
-  ): Promise<TrackMatch[]> => {
-    const response = await apiClient.post<TrackMatch[]>(
-      `/api/conversions/${jobId}/matches/${matchId}/search`,
-      { query }
+  ): Promise<SearchTrack[]> => {
+    const response = await apiClient.get<SearchTrack[]>(
+      `/api/conversions/${jobId}/matches/search`,
+      { params: { query } }
     );
     return response.data;
   },
