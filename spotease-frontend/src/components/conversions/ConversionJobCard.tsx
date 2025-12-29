@@ -106,9 +106,9 @@ const ConversionJobCard = ({ job }: ConversionJobCardProps) => {
           </Button>
         )}
 
-        {job.status === JobStatus.COMPLETED && (
+        {job.status === JobStatus.COMPLETED && job.completedAt && (
           <div className="text-center text-sm text-gray-600">
-            Completed {new Date(job.completedAt!).toLocaleString()}
+            Completed {new Date(job.completedAt).toLocaleString()}
           </div>
         )}
       </CardContent>

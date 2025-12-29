@@ -74,6 +74,11 @@ const TrackMatchCard = ({ match, onApprove, onSkip, isProcessing = false }: Trac
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-gray-900">{match.destinationTrackName}</p>
                 <p className="text-sm text-gray-600">{match.destinationArtist}</p>
+                {match.destinationDuration && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    Duration: {formatDuration(match.destinationDuration)}
+                  </p>
+                )}
               </div>
             </div>
           </div>

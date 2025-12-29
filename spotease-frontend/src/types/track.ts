@@ -26,6 +26,7 @@ export interface TrackMatch {
   destinationTrackId?: string;
   destinationTrackName?: string;
   destinationArtist?: string;
+  destinationDuration?: number;
   matchConfidence: number;
   status: MatchStatus;
   errorMessage?: string;

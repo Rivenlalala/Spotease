@@ -20,6 +20,7 @@ public class TrackMatchDto {
   private String destinationTrackId;
   private String destinationTrackName;
   private String destinationArtist;
+  private Integer destinationDuration;
   private Double matchConfidence;
   private MatchStatus status;
   private String errorMessage;

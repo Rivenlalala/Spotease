@@ -38,6 +38,7 @@ public class TrackMatch {
   private String destinationTrackId;
   private String destinationTrackName;
   private String destinationArtist;
+  private Integer destinationDuration;  // in seconds
 
   // Match metadata
   private Double matchConfidence;  // 0.0 - 1.0

@@ -317,6 +317,7 @@ public class ReviewController {
         .destinationTrackId(match.getDestinationTrackId())
         .destinationTrackName(match.getDestinationTrackName())
         .destinationArtist(match.getDestinationArtist())
+        .destinationDuration(match.getDestinationDuration())
         .matchConfidence(match.getMatchConfidence())
         .status(match.getStatus())
         .errorMessage(match.getErrorMessage())

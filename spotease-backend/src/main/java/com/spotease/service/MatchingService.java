@@ -390,6 +390,7 @@ public class MatchingService {
     match.setDestinationTrackId(getTrackId(destinationTrack));
     match.setDestinationTrackName(getTrackName(destinationTrack));
     match.setDestinationArtist(getFirstArtist(destinationTrack));
+    match.setDestinationDuration(getDurationInSeconds(destinationTrack));
 
     // Match metadata
     match.setMatchConfidence(score);
