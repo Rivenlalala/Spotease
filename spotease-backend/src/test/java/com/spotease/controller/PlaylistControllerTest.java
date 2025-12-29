@@ -72,7 +72,7 @@ class PlaylistControllerTest {
     user.setEmail("test@example.com");
     user.setSpotifyUserId("spotify123");
     user.setSpotifyAccessToken("encrypted_spotify_token");
-    user.setNeteaseUserId(456L);
+    user.setNeteaseUserId("456");
     user.setNeteaseCookie("encrypted_netease_cookie");
   }
 
