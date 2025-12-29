@@ -2,11 +2,8 @@ package com.spotease.service;
 
 import com.spotease.dto.netease.NeteaseQRKey;
 import com.spotease.dto.netease.NeteaseQRStatus;
-import com.spotease.dto.netease.NeteaseUserProfile;
-import com.spotease.model.User;
 import com.spotease.repository.UserRepository;
 import com.spotease.util.TokenEncryption;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -16,10 +13,9 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.util.Optional;
 import java.util.function.Function;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -66,7 +62,7 @@ class AuthServiceTest {
     String result = authService.generateNeteaseQRKey();
 
     // Assert
-    assertEquals("test-qr-key-123", result);
+    assertThat(result).isEqualTo("test-qr-key-123");
     verify(webClient).get();
   }
 
@@ -87,8 +83,8 @@ class AuthServiceTest {
     NeteaseQRStatus result = authService.checkNeteaseQRStatus("test-key");
 
     // Assert
-    assertEquals(801, result.getCode());
-    assertEquals("等待扫码", result.getMessage());
+    assertThat(result.getCode()).isEqualTo(801);
+    assertThat(result.getMessage()).isEqualTo("等待扫码");
   }
 
   @Test
@@ -109,8 +105,8 @@ class AuthServiceTest {
     NeteaseQRStatus result = authService.checkNeteaseQRStatus("test-key");
 
     // Assert
-    assertEquals(803, result.getCode());
-    assertNotNull(result.getCookie());
-    assertTrue(result.getCookie().contains("MUSIC_U"));
+    assertThat(result.getCode()).isEqualTo(803);
+    assertThat(result.getCookie()).isNotNull();
+    assertThat(result.getCookie()).contains("MUSIC_U");
   }
 }
