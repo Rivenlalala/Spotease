@@ -46,4 +46,8 @@ export const authApi = {
   logout: async (): Promise<void> => {
     await apiClient.post("/api/auth/logout");
   },
+
+  submitNeteaseCookie: async (cookie: string): Promise<void> => {
+    await apiClient.post("/api/auth/netease/cookie", { cookie });
+  },
 };
