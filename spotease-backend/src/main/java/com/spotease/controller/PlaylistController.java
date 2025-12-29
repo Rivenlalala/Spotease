@@ -55,6 +55,34 @@ public class PlaylistController {
     }
   }
 
+  @GetMapping("/netease")
+  public ResponseEntity<List<NeteasePlaylist>> getNeteasePlaylists(HttpSession session) {
+    Long userId = getUserIdFromSession(session);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    log.info("Fetching NetEase playlists for user {}", userId);
+
+    User user = userRepository.findById(userId).orElse(null);
+    if (user == null) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+    if (user.getNeteaseCookie() == null) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+
+    try {
+      String cookie = tokenEncryption.decrypt(user.getNeteaseCookie());
+      List<NeteasePlaylist> playlists = neteaseService.getPlaylists(cookie);
+      return ResponseEntity.ok(playlists);
+    } catch (Exception e) {
+      log.error("Failed to fetch NetEase playlists for user {}: {}", userId, e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
   private Long getUserIdFromSession(HttpSession session) {
     if (session == null) {
       return null;
