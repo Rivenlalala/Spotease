@@ -13,7 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Component
 @RequiredArgsConstructor
@@ -59,6 +61,7 @@ public class ConversionWorker {
 
       // For UPDATE mode, get existing tracks from destination
       List<?> existingTracks = null;
+      Set<String> alreadyMatchedTrackIds = new HashSet<>();
       if (job.getMode() == ConversionMode.UPDATE) {
         existingTracks = getDestinationTracks(job, destToken);
         if (existingTracks != null) {
@@ -75,13 +78,17 @@ public class ConversionWorker {
 
         // First check if track already exists in destination (UPDATE mode only)
         if (job.getMode() == ConversionMode.UPDATE && existingTracks != null) {
-          match = matchingService.findMatchInExistingTracks(sourceTrack, existingTracks, job);
+          match = matchingService.findMatchInExistingTracks(
+              sourceTrack, existingTracks, alreadyMatchedTrackIds, job);
 
           if (match != null) {
             log.debug("Track already exists in destination playlist (score: {}), skipping API search",
                 match.getMatchConfidence());
             // Save match and continue - don't add to autoMatchedTrackIds since it already exists
             trackMatchRepository.save(match);
+
+            // Track this destination track as matched to prevent duplicate matches
+            alreadyMatchedTrackIds.add(match.getDestinationTrackId());
 
             // Update counters based on match status
             job.setProcessedTracks(i + 1);

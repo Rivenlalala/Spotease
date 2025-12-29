@@ -32,12 +32,14 @@ public class MatchingService {
    *
    * @param sourceTrack the source track (SpotifyTrack or NeteaseTrack)
    * @param existingTracks list of tracks already in the destination playlist
+   * @param alreadyMatchedTrackIds set of track IDs that have already been matched to prevent duplicates
    * @param job the conversion job
    * @return TrackMatch if found with score >= 0.30, null otherwise
    */
   public TrackMatch findMatchInExistingTracks(
       Object sourceTrack,
       List<?> existingTracks,
+      java.util.Set<String> alreadyMatchedTrackIds,
       ConversionJob job
   ) {
     if (existingTracks == null || existingTracks.isEmpty()) {
@@ -47,13 +49,21 @@ public class MatchingService {
     String trackName = getTrackName(sourceTrack);
     String sourceTrackId = getTrackId(sourceTrack);
 
-    log.debug("Checking {} existing tracks for match to: {}", existingTracks.size(), trackName);
+    log.debug("Checking {} existing tracks for match to: {} (excluding {} already matched)",
+        existingTracks.size(), trackName, alreadyMatchedTrackIds.size());
 
-    // Score all existing tracks and select best
+    // Score all existing tracks and select best (excluding already matched ones)
     double bestScore = 0.0;
     Object bestCandidate = null;
 
     for (Object candidate : existingTracks) {
+      String candidateId = getTrackId(candidate);
+
+      // Skip tracks that have already been matched
+      if (alreadyMatchedTrackIds.contains(candidateId)) {
+        continue;
+      }
+
       double score = scoreCandidate(sourceTrack, candidate);
       if (score > bestScore) {
         bestScore = score;
