@@ -153,7 +153,7 @@ public class ConversionController {
    */
   private ConversionResponse mapToResponse(ConversionJob job) {
     return ConversionResponse.builder()
-        .jobId(job.getId())
+        .id(job.getId())
         .status(job.getStatus())
         .sourcePlaylistName(job.getSourcePlaylistName())
         .destinationPlaylistName(job.getDestinationPlaylistName())

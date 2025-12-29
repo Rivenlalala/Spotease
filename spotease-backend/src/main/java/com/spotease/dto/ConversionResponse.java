@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ConversionResponse {
-  private Long jobId;
+  private Long id;
   private JobStatus status;
   private String sourcePlaylistName;
   private String destinationPlaylistName;

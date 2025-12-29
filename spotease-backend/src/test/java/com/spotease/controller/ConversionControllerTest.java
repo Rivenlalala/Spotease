@@ -108,7 +108,7 @@ class ConversionControllerTest {
             .contentType(MediaType.APPLICATION_JSON)
             .content(objectMapper.writeValueAsString(request)))
         .andExpect(status().isCreated())
-        .andExpect(jsonPath("$.jobId", is(1)))
+        .andExpect(jsonPath("$.id", is(1)))
         .andExpect(jsonPath("$.status", is("QUEUED")))
         .andExpect(jsonPath("$.sourcePlaylistName", is("Original Playlist")))
         .andExpect(jsonPath("$.destinationPlaylistName", is("My New Playlist")))
@@ -185,9 +185,9 @@ class ConversionControllerTest {
             .session(authenticatedSession))
         .andExpect(status().isOk())
         .andExpect(jsonPath("$", hasSize(2)))
-        .andExpect(jsonPath("$[0].jobId", is(1)))
+        .andExpect(jsonPath("$[0].id", is(1)))
         .andExpect(jsonPath("$[0].status", is("QUEUED")))
-        .andExpect(jsonPath("$[1].jobId", is(2)))
+        .andExpect(jsonPath("$[1].id", is(2)))
         .andExpect(jsonPath("$[1].status", is("COMPLETED")));
 
     verify(jobRepository).findByUser_Id(1L);
@@ -211,7 +211,7 @@ class ConversionControllerTest {
     mockMvc.perform(get("/api/conversions/1")
             .session(authenticatedSession))
         .andExpect(status().isOk())
-        .andExpect(jsonPath("$.jobId", is(1)))
+        .andExpect(jsonPath("$.id", is(1)))
         .andExpect(jsonPath("$.status", is("QUEUED")))
         .andExpect(jsonPath("$.sourcePlaylistName", is("Original Playlist")));
 
