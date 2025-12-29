@@ -26,6 +26,63 @@ const TrackMatchCard = ({ match, onApprove, onSkip, onSearch, isProcessing = fal
   const [isLoading, setIsLoading] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [selectedTrack, setSelectedTrack] = useState<SearchTrack | null>(null);
+
+  const handleOpenSearch = async () => {
+    setIsSearching(true);
+    setSearchError(null);
+    const initialQuery = `${match.sourceTrackName} ${match.sourceArtist}`;
+    setSearchQuery(initialQuery);
+    await performSearch(initialQuery);
+  };
+
+  const handleCloseSearch = () => {
+    setIsSearching(false);
+    setSearchResults([]);
+    setSearchQuery('');
+    setSearchError(null);
+  };
+
+  const performSearch = async (query: string) => {
+    if (!query.trim()) return;
+
+    setIsLoading(true);
+    setSearchError(null);
+    try {
+      const results = await onSearch(query);
+      setSearchResults(results);
+    } catch {
+      setSearchError('Search failed. Please try again.');
+      setSearchResults([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    performSearch(searchQuery);
+  };
+
+  const handleSelectTrack = (track: SearchTrack) => {
+    setSelectedTrack(track);
+    setIsSearching(false);
+    setSearchResults([]);
+  };
+
+  const handleApprove = () => {
+    if (selectedTrack) {
+      onApprove({
+        destinationTrackId: selectedTrack.id,
+        destinationTrackName: selectedTrack.name,
+        destinationArtist: selectedTrack.artists.join(', '),
+        destinationDuration: Math.round(selectedTrack.duration / 1000), // Convert ms to seconds
+        destinationAlbumImageUrl: selectedTrack.albumImageUrl,
+      });
+    } else {
+      onApprove();
+    }
+  };
+
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
