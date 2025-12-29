@@ -245,32 +245,39 @@ const TrackMatchCard = ({ match, onApprove, onSkip, onSearch, isProcessing = fal
           </div>
         </div>
 
-        {/* Destination Track */}
-        {match.destinationTrackId ? (
+        {/* Destination Track or Search View */}
+        {isSearching ? (
+          <SearchResultsView />
+        ) : selectedTrack ? (
+          <div className="bg-purple-50 rounded-lg p-4">
+            <h3 className="text-sm font-semibold text-purple-900 mb-2">Selected Track (Manual)</h3>
+            <div className="flex items-start gap-3">
+              {selectedTrack.albumImageUrl ? (
+                <img
+                  src={selectedTrack.albumImageUrl}
+                  alt={selectedTrack.album}
+                  className="w-12 h-12 rounded flex-shrink-0 object-cover"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-purple-200 rounded flex items-center justify-center flex-shrink-0">
+                  <Music className="w-6 h-6 text-purple-600" />
+                </div>
+              )}
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-gray-900">{selectedTrack.name}</p>
+                <p className="text-sm text-gray-600">{selectedTrack.artists.join(', ')}</p>
+                <p className="text-sm text-gray-500">{selectedTrack.album}</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Duration: {formatDuration(Math.round(selectedTrack.duration / 1000))}
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : match.destinationTrackId ? (
           <div className="bg-green-50 rounded-lg p-4">
             <h3 className="text-sm font-semibold text-green-900 mb-2">Suggested Match</h3>
             <div className="flex items-start gap-3">
-              {match.destinationImageUrl ? (
-                <img
-                  src={match.destinationImageUrl}
-                  alt={match.destinationTrackName || 'Track'}
-                  className="w-12 h-12 rounded object-cover flex-shrink-0"
-                  onError={(e) => {
-                    e.currentTarget.style.display = 'none';
-                    const fallback = e.currentTarget.nextElementSibling;
-                    if (fallback) {
-                      fallback.classList.remove('hidden');
-                    }
-                  }}
-                />
-              ) : null}
-              <div
-                className={
-                  match.destinationImageUrl
-                    ? 'hidden w-12 h-12 bg-green-200 rounded flex items-center justify-center flex-shrink-0'
-                    : 'w-12 h-12 bg-green-200 rounded flex items-center justify-center flex-shrink-0'
-                }
-              >
+              <div className="w-12 h-12 bg-green-200 rounded flex items-center justify-center flex-shrink-0">
                 <Music className="w-6 h-6 text-green-600" />
               </div>
               <div className="flex-1 min-w-0">
