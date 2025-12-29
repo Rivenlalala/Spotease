@@ -1,5 +1,6 @@
 package com.spotease.controller;
 
+import com.spotease.dto.NeteaseCookieRequest;
 import com.spotease.dto.netease.NeteaseQRStatus;
 import com.spotease.model.User;
 import com.spotease.service.AuthService;
@@ -159,6 +160,30 @@ public class AuthController {
     } catch (Exception e) {
       return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
           .body(Map.of("error", "Failed to check QR status"));
+    }
+  }
+
+  @PostMapping("/netease/cookie")
+  public ResponseEntity<?> submitNeteaseCookie(
+      @RequestBody NeteaseCookieRequest request,
+      HttpSession session) {
+
+    Long userId = getUserIdFromSession(session);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    if (request.getCookie() == null || request.getCookie().trim().isEmpty()) {
+      return ResponseEntity.badRequest()
+          .body(Map.of("error", "Missing cookie"));
+    }
+
+    try {
+      authService.handleNeteaseQRLogin(userId, request.getCookie());
+      return ResponseEntity.ok(Map.of("success", true));
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Failed to save cookie"));
     }
   }
 

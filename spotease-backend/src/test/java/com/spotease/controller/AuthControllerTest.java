@@ -164,4 +164,48 @@ class AuthControllerTest {
 
     verify(authService).handleSpotifyCallback("test-code");
   }
+
+  @Test
+  void testSubmitNeteaseCookie_Success() throws Exception {
+    // Arrange
+    User user = new User();
+    user.setId(1L);
+    user.setNeteaseUserId("12345");
+
+    when(authService.handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie"))
+        .thenReturn(user);
+
+    // Act & Assert
+    mockMvc.perform(post("/api/auth/netease/cookie")
+            .contentType("application/json")
+            .content("{\"cookie\": \"MUSIC_U=test_cookie\"}")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$.success", is(true)));
+
+    verify(authService).handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie");
+  }
+
+  @Test
+  void testSubmitNeteaseCookie_Unauthorized() throws Exception {
+    // Act & Assert
+    mockMvc.perform(post("/api/auth/netease/cookie")
+            .contentType("application/json")
+            .content("{\"cookie\": \"MUSIC_U=test_cookie\"}"))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(authService);
+  }
+
+  @Test
+  void testSubmitNeteaseCookie_MissingCookie() throws Exception {
+    // Act & Assert
+    mockMvc.perform(post("/api/auth/netease/cookie")
+            .contentType("application/json")
+            .content("{\"cookie\": \"\"}")
+            .session(authenticatedSession))
+        .andExpect(status().isBadRequest());
+
+    verifyNoInteractions(authService);
+  }
 }
