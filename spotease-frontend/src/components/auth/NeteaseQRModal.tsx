@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { authApi } from "@/api/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -20,6 +21,9 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
   const [qrImage, setQrImage] = useState<string>("");
   const [qrKey, setQrKey] = useState<string>("");
   const [status, setStatus] = useState<"loading" | "ready" | "scanning" | "success" | "error">("loading");
+  const [showManualInput, setShowManualInput] = useState(false);
+  const [manualCookie, setManualCookie] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { toast } = useToast();
   const { refetchAuth } = useAuth();
 
@@ -33,11 +37,43 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
       // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_error) {
       setStatus("error");
+      setShowManualInput(true); // Auto-expand manual input on QR failure
       toast({
         title: "Error",
-        description: "Failed to generate QR code",
+        description: "Failed to generate QR code. You can enter your cookie manually below.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleManualSubmit = async () => {
+    if (!manualCookie.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter your NetEase cookie",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+      await authApi.submitNeteaseCookie(manualCookie);
+      setStatus("success");
+      toast({
+        title: "Success",
+        description: "NetEase Music connected successfully",
+      });
+      refetchAuth();
+      setTimeout(() => onOpenChange(false), 1500);
+    } catch (_error) {
+      toast({
+        title: "Error",
+        description: "Failed to save cookie. Please check and try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -114,9 +150,46 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
           )}
 
           {status === "error" && (
-            <div className="w-64 h-64 flex flex-col items-center justify-center gap-4">
+            <div className="w-64 flex flex-col items-center justify-center gap-4">
               <p className="text-red-600">Failed to generate QR code</p>
-              <Button onClick={generateQR}>Try Again</Button>
+              <Button onClick={generateQR} variant="outline" size="sm">
+                Try Again
+              </Button>
+            </div>
+          )}
+
+          {/* Manual Cookie Input Section */}
+          {status !== "success" && (
+            <div className="w-full border-t pt-4 mt-4">
+              <button
+                onClick={() => setShowManualInput(!showManualInput)}
+                className="text-sm text-gray-500 hover:text-gray-700 flex items-center gap-1"
+              >
+                {showManualInput ? "▼" : "▶"} Having trouble? Enter cookie manually
+              </button>
+
+              {showManualInput && (
+                <div className="mt-3 space-y-3">
+                  <p className="text-xs text-gray-500">
+                    1. Log into music.163.com in your browser<br />
+                    2. Open DevTools (F12) → Application → Cookies<br />
+                    3. Copy the entire cookie value
+                  </p>
+                  <Textarea
+                    placeholder="Paste your NetEase cookie here..."
+                    value={manualCookie}
+                    onChange={(e) => setManualCookie(e.target.value)}
+                    className="min-h-[80px] text-xs"
+                  />
+                  <Button
+                    onClick={handleManualSubmit}
+                    disabled={isSubmitting || !manualCookie.trim()}
+                    className="w-full"
+                  >
+                    {isSubmitting ? "Connecting..." : "Connect with Cookie"}
+                  </Button>
+                </div>
+              )}
             </div>
           )}
         </div>
