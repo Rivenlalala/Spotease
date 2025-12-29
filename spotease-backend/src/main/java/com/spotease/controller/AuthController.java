@@ -1,9 +1,11 @@
 package com.spotease.controller;
 
+import com.spotease.dto.netease.NeteaseQRStatus;
 import com.spotease.model.User;
 import com.spotease.service.AuthService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -91,21 +93,84 @@ public class AuthController {
   }
 
   @PostMapping("/netease/qr")
-  public ResponseEntity<?> generateNeteaseQR() {
-    // TODO: Implement NetEase QR code generation
-    return ResponseEntity.ok(Map.of(
-        "message", "NetEase QR authentication not yet implemented",
-        "qrKey", "placeholder-key",
-        "qrImage", "data:image/png;base64,..."
-    ));
+  public ResponseEntity<?> generateNeteaseQR(HttpSession session) {
+    Long userId = getUserIdFromSession(session);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    try {
+      String qrKey = authService.generateNeteaseQRKey();
+      String qrUrl = "https://music.163.com/login?codekey=" + qrKey;
+
+      return ResponseEntity.ok(Map.of(
+          "qrKey", qrKey,
+          "qrUrl", qrUrl
+      ));
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Failed to generate QR code"));
+    }
   }
 
   @GetMapping("/netease/qr/status")
-  public ResponseEntity<?> checkNeteaseQRStatus(@RequestParam String key) {
-    // TODO: Implement NetEase QR status polling
-    return ResponseEntity.ok(Map.of(
-        "status", "PENDING",
-        "message", "NetEase QR authentication not yet implemented"
-    ));
+  public ResponseEntity<?> checkNeteaseQRStatus(
+      @RequestParam(required = false) String key,
+      HttpSession session) {
+
+    Long userId = getUserIdFromSession(session);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    if (key == null || key.trim().isEmpty()) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+          .body(Map.of("error", "Missing QR key"));
+    }
+
+    try {
+      NeteaseQRStatus qrStatus = authService.checkNeteaseQRStatus(key);
+
+      // Map NetEase status code to readable status
+      String status;
+      switch (qrStatus.getCode()) {
+        case 800:
+          status = "EXPIRED";
+          break;
+        case 801:
+          status = "WAITING";
+          break;
+        case 802:
+          status = "SCANNED";
+          break;
+        case 803:
+          status = "SUCCESS";
+          // Handle successful login
+          authService.handleNeteaseQRLogin(userId, qrStatus.getCookie());
+          break;
+        default:
+          status = "UNKNOWN";
+      }
+
+      return ResponseEntity.ok(Map.of(
+          "status", status,
+          "message", qrStatus.getMessage() != null ? qrStatus.getMessage() : ""
+      ));
+
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+          .body(Map.of("error", "Failed to check QR status"));
+    }
+  }
+
+  private Long getUserIdFromSession(HttpSession session) {
+    if (session == null) {
+      return null;
+    }
+    Object userIdObj = session.getAttribute("userId");
+    if (userIdObj instanceof Long) {
+      return (Long) userIdObj;
+    }
+    return null;
   }
 }
