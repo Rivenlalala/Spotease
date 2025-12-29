@@ -128,24 +128,47 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 - `POST /api/conversions/{jobId}/matches/{matchId}/skip` - Skip match
 
 **WebSocket:**
-- `WS /ws/conversions` - Real-time job updates
-- Topics: `/topic/conversions/{jobId}`
+- `WS /ws/conversions` - Real-time job updates (STOMP over SockJS)
+- Topics:
+  - `/topic/conversions` - All job updates (for Dashboard)
+  - `/topic/conversions/{jobId}` - Job-specific updates (for detail views)
 
 ## Job Processing Flow
 
 1. User creates conversion job via POST `/api/conversions`
-2. Job status: QUEUED → backend saves job
-3. ConversionWorker processes asynchronously
-4. Job status: PROCESSING
+2. Job status: QUEUED → backend saves job and publishes `ConversionJobCreatedEvent`
+3. `@TransactionalEventListener(phase = AFTER_COMMIT)` triggers async worker after transaction commits
+4. ConversionWorker processes asynchronously, job status: PROCESSING
 5. For each track:
-   - MatchingService finds best match
+   - In UPDATE mode: first check existing tracks in destination (threshold: 0.30)
+   - If no existing match: MatchingService searches destination platform API
    - AUTO_MATCHED (≥0.85): Add to destination immediately
    - PENDING_REVIEW (0.60-0.84): Save for user review
    - FAILED (<0.60): Save for user review
-6. WebSocket updates sent every 5 tracks
+6. WebSocket updates sent every 5 tracks (to both general and job-specific topics)
 7. Job status: REVIEW_PENDING (if pending/failed) or COMPLETED
 8. User reviews pending matches via frontend
-9. Job status: COMPLETED when all reviewed
+9. Job status: COMPLETED when all matches reviewed
+
+### Event-Driven Architecture
+
+The conversion workflow uses Spring's event system to prevent race conditions:
+
+```
+ConversionService.createJob()
+    ↓
+@Transactional saves ConversionJob
+    ↓
+Publishes ConversionJobCreatedEvent
+    ↓
+Transaction commits
+    ↓
+ConversionJobEventListener (AFTER_COMMIT phase)
+    ↓
+ConversionWorker.processConversionJob() (async)
+```
+
+This ensures the job exists in the database before the async worker tries to load it.
 
 ## WebSocket Message Format
 
@@ -166,9 +189,10 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 **MatchingService** implements intelligent track matching between Spotify and NetEase Music:
 
 **Features:**
-- Multi-factor scoring: Duration (60%), Track name (20%), Artist (20%)
+- Multi-factor scoring: Track name (40%), Artist (30%), Duration (30%)
 - Dynamic weight rebalancing when data is missing
 - 3-tier search fallback strategy for maximum match rate
+- UPDATE mode optimization: checks existing destination tracks first (threshold: 0.30)
 - Confidence-based thresholds:
   - AUTO_MATCHED (≥0.85): Automatically added to destination playlist
   - PENDING_REVIEW (0.60-0.84): Requires user review
@@ -183,6 +207,11 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 - Tier 1: `"{track name}" {first artist}` (quoted search)
 - Tier 2: `{track name} {first artist}` (unquoted search)
 - Tier 3: `{track name}` (name only, fallback)
+
+**UPDATE Mode Optimization:**
+In UPDATE mode, before searching the API for each track, the algorithm first checks
+existing tracks in the destination playlist. If a match is found with score ≥0.30,
+it skips the API search entirely. This prevents duplicate tracks and reduces API calls.
 
 **Usage:**
 ```java

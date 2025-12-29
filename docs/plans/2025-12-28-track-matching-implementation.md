@@ -2,6 +2,10 @@
 
 **Status:** ✅ COMPLETED - 2025-12-28
 
+> **Note (2025-12-29):** Post-implementation, the scoring weights were rebalanced to prioritize
+> track name and artist over duration. Current weights: Track name (40%), Artist (30%), Duration (30%).
+> See `spotease-backend/README.md` and `MatchingService.java` for the current implementation.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Implement MatchingService and StringSimilarity utility for intelligent track matching between Spotify and NetEase Music.

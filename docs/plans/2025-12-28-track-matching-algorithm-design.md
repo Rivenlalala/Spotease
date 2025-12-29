@@ -4,6 +4,10 @@
 **Status:** Design Complete
 **Component:** MatchingService + StringSimilarity utility
 
+> **Note (2025-12-29):** Post-implementation, the scoring weights were rebalanced to prioritize
+> track name and artist over duration. Current weights: Track name (40%), Artist (30%), Duration (30%).
+> See `spotease-backend/README.md` for the current implementation details.
+
 ---
 
 ## Overview

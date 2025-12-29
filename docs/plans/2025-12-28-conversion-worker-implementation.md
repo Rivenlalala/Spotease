@@ -1,10 +1,18 @@
 # Conversion Worker Implementation Plan
 
+**Status:** ✅ COMPLETED
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build the async conversion worker that processes playlist conversion jobs in the background, matching tracks between platforms and sending real-time WebSocket updates to the frontend.
 
 **Architecture:** Spring @Async worker pattern with WebSocket (STOMP) for real-time updates. ConversionService orchestrates job creation and validation. ConversionWorker processes jobs asynchronously, using MatchingService for track matching, SpotifyService/NeteaseService for platform operations, and WebSocketService for progress updates. Jobs transition through states: QUEUED → PROCESSING → REVIEW_PENDING/COMPLETED.
+
+> **Implementation Notes (2025-12-29):**
+> - Uses `@TransactionalEventListener(phase = AFTER_COMMIT)` instead of direct @Async call to prevent race conditions
+> - WebSocket sends to both `/topic/conversions` (general) and `/topic/conversions/{jobId}` (specific)
+> - UPDATE mode checks existing tracks first (threshold: 0.30) before API search
+> - See `spotease-backend/README.md` for current architecture details
 
 **Tech Stack:** Spring Boot 3.2+, Spring WebSocket (STOMP), Spring @Async, Spring Data JPA, Lombok, JUnit 5, Mockito
 
