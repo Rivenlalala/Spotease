@@ -62,10 +62,18 @@ Application will start on http://localhost:8080
 ### Authentication
 - `GET /api/auth/spotify/login` - Get Spotify OAuth URL
 - `GET /api/auth/spotify/callback` - Spotify OAuth callback
-- `POST /api/auth/netease/qr` - Generate NetEase QR code (stub)
-- `GET /api/auth/netease/qr/status` - Check QR scan status (stub)
+- `POST /api/auth/netease/qr` - Generate NetEase QR code
+- `GET /api/auth/netease/qr/status?key=...` - Check QR scan status
 - `GET /api/auth/status` - Get authentication status
 - `POST /api/auth/logout` - Logout
+
+### Playlists
+- `GET /api/playlists/spotify` - List user's Spotify playlists
+- `GET /api/playlists/netease` - List user's NetEase playlists
+- `GET /api/playlists/{platform}/{id}` - Get single playlist details
+
+### Review (Manual Search)
+- `GET /api/conversions/{jobId}/matches/search?query=...` - Search for alternative tracks
 
 ### Health
 - `GET /api/health` - Health check endpoint
@@ -206,10 +214,16 @@ TrackMatch match = matchingService.findBestMatch(
 - ✅ CREATE and UPDATE playlist modes
 - ✅ Error handling and retry logic
 
-**TODO:**
-- ⏳ NetEase QR authentication implementation
-- ⏳ Frontend integration with WebSocket
-- ⏳ Manual search endpoint for alternative matches
+- ✅ **PlaylistController** - Browse Spotify and NetEase playlists
+- ✅ **NetEase QR authentication** - Complete QR login flow
+- ✅ **Manual search endpoint** - Alternative match search
+
+**Backend Complete:** All core features implemented and tested.
+
+**Next Steps:**
+- Frontend integration
+- End-to-end testing
+- Production deployment
 
 ## License
 
