@@ -10,4 +10,5 @@ public class SpotifyPlaylist {
     private String name;
     private String description;
     private Integer totalTracks;
+    private String coverImageUrl;
 }
