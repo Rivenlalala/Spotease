@@ -67,10 +67,12 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
       });
       refetchAuth();
       setTimeout(() => onOpenChange(false), 1500);
-    } catch (_error) {
+    } catch (error) {
+      const axiosError = error as { response?: { data?: { error?: string } } };
+      const errorMessage = axiosError.response?.data?.error || "Failed to save cookie. Please check and try again.";
       toast({
         title: "Error",
-        description: "Failed to save cookie. Please check and try again.",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

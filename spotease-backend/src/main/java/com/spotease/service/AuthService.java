@@ -163,9 +163,12 @@ public class AuthService {
   }
 
   public User handleNeteaseQRLogin(Long userId, String cookie) {
-    try {
-      log.info("Processing NetEase QR login for user {}", userId);
+    log.info("Processing NetEase QR login for user {}", userId);
 
+    // Validate the cookie first by calling NetEase API
+    validateNeteaseCookie(cookie);
+
+    try {
       User user = userRepository.findById(userId)
           .orElseThrow(() -> new RuntimeException("User not found"));
 
@@ -180,6 +183,43 @@ public class AuthService {
     } catch (Exception e) {
       log.error("Failed to process NetEase QR login for user {}: {}", userId, e.getMessage());
       throw new RuntimeException("Failed to process NetEase QR login", e);
+    }
+  }
+
+  private void validateNeteaseCookie(String cookie) {
+    try {
+      var response = neteaseWebClient
+          .get()
+          .uri("/login/status")
+          .header("Cookie", cookie)
+          .retrieve()
+          .bodyToMono(new ParameterizedTypeReference<java.util.Map<String, Object>>() {})
+          .timeout(Duration.ofSeconds(10))
+          .block();
+
+      if (response == null) {
+        throw new IllegalArgumentException("Invalid cookie: no response from NetEase");
+      }
+
+      // Check if account exists in response (indicates valid login)
+      Object data = response.get("data");
+      if (data instanceof java.util.Map) {
+        @SuppressWarnings("unchecked")
+        java.util.Map<String, Object> dataMap = (java.util.Map<String, Object>) data;
+        Object account = dataMap.get("account");
+        if (account == null) {
+          throw new IllegalArgumentException("Invalid cookie: not logged in");
+        }
+      } else {
+        throw new IllegalArgumentException("Invalid cookie: unexpected response format");
+      }
+
+      log.info("NetEase cookie validated successfully");
+    } catch (IllegalArgumentException e) {
+      throw e;
+    } catch (Exception e) {
+      log.error("Failed to validate NetEase cookie: {}", e.getMessage());
+      throw new IllegalArgumentException("Invalid cookie: verification failed", e);
     }
   }
 
