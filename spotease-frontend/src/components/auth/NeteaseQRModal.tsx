@@ -86,32 +86,34 @@ const NeteaseQRModal = ({ open, onOpenChange }: NeteaseQRModalProps) => {
   }, [open]);
 
   useEffect(() => {
-    if (qrKey && status === "ready") {
-      const interval = setInterval(async () => {
-        try {
-          const response = await authApi.checkNeteaseQRStatus(qrKey);
-
-          if (response.status === "SUCCESS") {
-            setStatus("success");
-            clearInterval(interval);
-            toast({
-              title: "Success",
-              description: "NetEase Music connected successfully",
-            });
-            refetchAuth();
-            setTimeout(() => onOpenChange(false), 1500);
-          } else if (response.status === "SCANNING") {
-            setStatus("scanning");
-          }
-        } catch (error) {
-          console.error("Error checking QR status:", error);
-        }
-      }, 2000);
-
-      return () => clearInterval(interval);
+    // Only poll when modal is open and QR is ready/scanning
+    if (!open || !qrKey || (status !== "ready" && status !== "scanning")) {
+      return;
     }
+
+    const interval = setInterval(async () => {
+      try {
+        const response = await authApi.checkNeteaseQRStatus(qrKey);
+
+        if (response.status === "SUCCESS") {
+          setStatus("success");
+          toast({
+            title: "Success",
+            description: "NetEase Music connected successfully",
+          });
+          refetchAuth();
+          setTimeout(() => onOpenChange(false), 1500);
+        } else if (response.status === "SCANNED") {
+          setStatus("scanning");
+        }
+      } catch (error) {
+        console.error("Error checking QR status:", error);
+      }
+    }, 2000);
+
+    return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [qrKey, status]);
+  }, [open, qrKey, status]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
