@@ -135,4 +135,48 @@ class PlaylistControllerTest {
     verifyNoInteractions(tokenEncryption);
     verifyNoInteractions(spotifyService);
   }
+
+  @Test
+  void testGetNeteasePlaylists_Success() throws Exception {
+    // Arrange
+    NeteasePlaylist playlist1 = new NeteasePlaylist();
+    playlist1.setId("123");
+    playlist1.setName("网易播放列表");
+    playlist1.setDescription("测试描述");
+    playlist1.setTrackCount(15);
+
+    NeteasePlaylist playlist2 = new NeteasePlaylist();
+    playlist2.setId("456");
+    playlist2.setName("另一个播放列表");
+    playlist2.setTrackCount(25);
+
+    List<NeteasePlaylist> playlists = Arrays.asList(playlist1, playlist2);
+
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    when(tokenEncryption.decrypt("encrypted_netease_cookie")).thenReturn("decrypted_cookie");
+    when(neteaseService.getPlaylists("decrypted_cookie")).thenReturn(playlists);
+
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/netease")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(2)))
+        .andExpect(jsonPath("$[0].id", is("123")))
+        .andExpect(jsonPath("$[0].name", is("网易播放列表")))
+        .andExpect(jsonPath("$[0].trackCount", is(15)))
+        .andExpect(jsonPath("$[1].id", is("456")));
+
+    verify(userRepository).findById(1L);
+    verify(tokenEncryption).decrypt("encrypted_netease_cookie");
+    verify(neteaseService).getPlaylists("decrypted_cookie");
+  }
+
+  @Test
+  void testGetNeteasePlaylists_Unauthorized() throws Exception {
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/netease"))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(neteaseService);
+  }
 }
