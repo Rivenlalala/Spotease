@@ -118,7 +118,7 @@ public class NeteaseService {
       dto.setId(playlistDetail.getId());
       dto.setName(playlistDetail.getName());
       dto.setDescription(playlistDetail.getDescription());
-      dto.setTrackCount(playlistDetail.getTracks() != null ? playlistDetail.getTracks().size() : 0);
+      dto.setTotalTracks(playlistDetail.getTracks() != null ? playlistDetail.getTracks().size() : 0);
       dto.setCoverImgUrl(playlistDetail.getCoverImgUrl());
       dto.setUserId(playlistDetail.getUserId());
       return dto;

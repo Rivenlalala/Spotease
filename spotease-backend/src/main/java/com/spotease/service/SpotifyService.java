@@ -77,7 +77,7 @@ public class SpotifyService {
       dto.setId(playlist.getId());
       dto.setName(playlist.getName());
       dto.setDescription(playlist.getDescription());
-      dto.setTrackCount(playlist.getTracks().getTotal());
+      dto.setTotalTracks(playlist.getTracks().getTotal());
       return dto;
     } catch (Exception e) {
       throw new RuntimeException("Failed to get Spotify playlist", e);
@@ -165,7 +165,7 @@ public class SpotifyService {
     dto.setId(playlist.getId());
     dto.setName(playlist.getName());
     dto.setDescription(playlist.getDescription());
-    dto.setTrackCount(playlist.getTracks().getTotal());
+    dto.setTotalTracks(playlist.getTracks().getTotal());
     return dto;
   }
 

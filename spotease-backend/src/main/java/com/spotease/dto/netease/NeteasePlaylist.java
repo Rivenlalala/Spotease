@@ -9,7 +9,7 @@ public class NeteasePlaylist {
   private String id;
   private String name;
   private String description;
-  private Integer trackCount;
+  private Integer totalTracks;
   private String coverImgUrl;
   private Long userId;
 }

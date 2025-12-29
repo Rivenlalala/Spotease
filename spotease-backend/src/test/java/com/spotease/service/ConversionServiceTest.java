@@ -75,7 +75,7 @@ class ConversionServiceTest {
     SpotifyPlaylist sourcePlaylist = new SpotifyPlaylist();
     sourcePlaylist.setId("playlist123");
     sourcePlaylist.setName("Source Playlist");
-    sourcePlaylist.setTrackCount(10);
+    sourcePlaylist.setTotalTracks(10);
     when(spotifyService.getPlaylistById("decrypted-spotify-token", "playlist123"))
         .thenReturn(sourcePlaylist);
 
@@ -148,7 +148,7 @@ class ConversionServiceTest {
     SpotifyPlaylist sourcePlaylist = new SpotifyPlaylist();
     sourcePlaylist.setId("playlist123");
     sourcePlaylist.setName("Source Playlist");
-    sourcePlaylist.setTrackCount(10);
+    sourcePlaylist.setTotalTracks(10);
     when(spotifyService.getPlaylistById("decrypted-spotify-token", "playlist123"))
         .thenReturn(sourcePlaylist);
 

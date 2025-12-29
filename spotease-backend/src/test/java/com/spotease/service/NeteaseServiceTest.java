@@ -73,7 +73,7 @@ class NeteaseServiceTest {
     mockPlaylist.setId("playlist123");
     mockPlaylist.setName("Test Playlist");
     mockPlaylist.setDescription("Test Description");
-    mockPlaylist.setTrackCount(10);
+    mockPlaylist.setTotalTracks(10);
 
     NeteaseResponse<Void> playlistResponse = new NeteaseResponse<>();
     playlistResponse.setCode(200);
@@ -103,7 +103,7 @@ class NeteaseServiceTest {
     assertThat(result.get(0).getId()).isEqualTo("playlist123");
     assertThat(result.get(0).getName()).isEqualTo("Test Playlist");
     assertThat(result.get(0).getDescription()).isEqualTo("Test Description");
-    assertThat(result.get(0).getTrackCount()).isEqualTo(10);
+    assertThat(result.get(0).getTotalTracks()).isEqualTo(10);
 
     // Verify interactions
     verify(webClient, times(2)).get();

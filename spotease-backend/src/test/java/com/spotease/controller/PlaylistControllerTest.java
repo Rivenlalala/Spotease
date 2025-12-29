@@ -83,12 +83,12 @@ class PlaylistControllerTest {
     playlist1.setId("playlist1");
     playlist1.setName("My Playlist");
     playlist1.setDescription("Test description");
-    playlist1.setTrackCount(10);
+    playlist1.setTotalTracks(10);
 
     SpotifyPlaylist playlist2 = new SpotifyPlaylist();
     playlist2.setId("playlist2");
     playlist2.setName("Another Playlist");
-    playlist2.setTrackCount(20);
+    playlist2.setTotalTracks(20);
 
     List<SpotifyPlaylist> playlists = Arrays.asList(playlist1, playlist2);
 
@@ -103,7 +103,7 @@ class PlaylistControllerTest {
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[0].id", is("playlist1")))
         .andExpect(jsonPath("$[0].name", is("My Playlist")))
-        .andExpect(jsonPath("$[0].trackCount", is(10)))
+        .andExpect(jsonPath("$[0].totalTracks", is(10)))
         .andExpect(jsonPath("$[1].id", is("playlist2")))
         .andExpect(jsonPath("$[1].name", is("Another Playlist")));
 
@@ -143,12 +143,12 @@ class PlaylistControllerTest {
     playlist1.setId("123");
     playlist1.setName("网易播放列表");
     playlist1.setDescription("测试描述");
-    playlist1.setTrackCount(15);
+    playlist1.setTotalTracks(15);
 
     NeteasePlaylist playlist2 = new NeteasePlaylist();
     playlist2.setId("456");
     playlist2.setName("另一个播放列表");
-    playlist2.setTrackCount(25);
+    playlist2.setTotalTracks(25);
 
     List<NeteasePlaylist> playlists = Arrays.asList(playlist1, playlist2);
 
@@ -163,7 +163,7 @@ class PlaylistControllerTest {
         .andExpect(jsonPath("$", hasSize(2)))
         .andExpect(jsonPath("$[0].id", is("123")))
         .andExpect(jsonPath("$[0].name", is("网易播放列表")))
-        .andExpect(jsonPath("$[0].trackCount", is(15)))
+        .andExpect(jsonPath("$[0].totalTracks", is(15)))
         .andExpect(jsonPath("$[1].id", is("456")));
 
     verify(userRepository).findById(1L);
@@ -187,7 +187,7 @@ class PlaylistControllerTest {
     playlist.setId("playlist123");
     playlist.setName("Test Playlist");
     playlist.setDescription("Test description");
-    playlist.setTrackCount(42);
+    playlist.setTotalTracks(42);
 
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     when(tokenEncryption.decrypt("encrypted_spotify_token")).thenReturn("decrypted_token");
@@ -199,7 +199,7 @@ class PlaylistControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id", is("playlist123")))
         .andExpect(jsonPath("$.name", is("Test Playlist")))
-        .andExpect(jsonPath("$.trackCount", is(42)));
+        .andExpect(jsonPath("$.totalTracks", is(42)));
 
     verify(userRepository).findById(1L);
     verify(tokenEncryption).decrypt("encrypted_spotify_token");
@@ -212,7 +212,7 @@ class PlaylistControllerTest {
     NeteasePlaylist playlist = new NeteasePlaylist();
     playlist.setId("789");
     playlist.setName("网易歌单");
-    playlist.setTrackCount(30);
+    playlist.setTotalTracks(30);
 
     when(userRepository.findById(1L)).thenReturn(Optional.of(user));
     when(tokenEncryption.decrypt("encrypted_netease_cookie")).thenReturn("decrypted_cookie");
@@ -224,7 +224,7 @@ class PlaylistControllerTest {
         .andExpect(status().isOk())
         .andExpect(jsonPath("$.id", is("789")))
         .andExpect(jsonPath("$.name", is("网易歌单")))
-        .andExpect(jsonPath("$.trackCount", is(30)));
+        .andExpect(jsonPath("$.totalTracks", is(30)));
 
     verify(userRepository).findById(1L);
     verify(tokenEncryption).decrypt("encrypted_netease_cookie");

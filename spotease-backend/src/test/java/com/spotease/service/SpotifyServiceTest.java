@@ -70,7 +70,7 @@ class SpotifyServiceTest {
     assertThat(result).hasSize(1);
     assertThat(result.get(0).getId()).isEqualTo("playlist123");
     assertThat(result.get(0).getName()).isEqualTo("Test Playlist");
-    assertThat(result.get(0).getTrackCount()).isEqualTo(10);
+    assertThat(result.get(0).getTotalTracks()).isEqualTo(10);
   }
 
   @Test

@@ -50,12 +50,12 @@ public class ConversionService {
       String accessToken = tokenEncryption.decrypt(user.getSpotifyAccessToken());
       SpotifyPlaylist playlist = spotifyService.getPlaylistById(accessToken, request.getSourcePlaylistId());
       sourcePlaylistName = playlist.getName();
-      totalTracks = playlist.getTrackCount();
+      totalTracks = playlist.getTotalTracks();
     } else {
       String cookie = tokenEncryption.decrypt(user.getNeteaseCookie());
       NeteasePlaylist playlist = neteaseService.getPlaylistById(cookie, request.getSourcePlaylistId());
       sourcePlaylistName = playlist.getName();
-      totalTracks = playlist.getTrackCount();
+      totalTracks = playlist.getTotalTracks();
     }
 
     // Create job
