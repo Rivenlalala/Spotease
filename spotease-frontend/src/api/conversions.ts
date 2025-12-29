@@ -37,7 +37,7 @@ export const conversionsApi = {
   // Get pending matches for review
   getPendingMatches: async (jobId: number): Promise<TrackMatch[]> => {
     const response = await apiClient.get<TrackMatch[]>(
-      `/api/conversions/${jobId}/pending-matches`
+      `/api/conversions/${jobId}/matches/pending`
     );
     return response.data;
   },
