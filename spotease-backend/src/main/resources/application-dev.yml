@@ -14,10 +14,10 @@ spotease:
   spotify:
     client-id: ${SPOTIFY_CLIENT_ID:changeme}
     client-secret: ${SPOTIFY_CLIENT_SECRET:changeme}
-    redirect-uri: http://localhost:8080/api/auth/spotify/callback
+    redirect-uri: http://127.0.0.1:8080/api/auth/spotify/callback
   netease:
     api-url: ${NETEASE_API_URL:https://netease-api.rivenlalala.xyz}
 
 # CORS for local frontend
 cors:
-  allowed-origins: http://localhost:5173
+  allowed-origins: http://127.0.0.1:5173
