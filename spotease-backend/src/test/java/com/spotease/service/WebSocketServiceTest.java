@@ -13,7 +13,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,16 +42,24 @@ class WebSocketServiceTest {
   }
 
   @Test
-  void shouldSendJobUpdate() {
+  void shouldSendJobUpdateToBothTopics() {
+    // When
+    webSocketService.sendJobUpdate(job);
+
+    // Then - verify message sent to both general and job-specific topics
+    verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
+  }
+
+  @Test
+  void shouldSendJobUpdateWithCorrectMessage() {
     // When
     webSocketService.sendJobUpdate(job);
 
     // Then
     ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
-    verify(messagingTemplate).convertAndSend(
-        eq("/topic/conversions/" + job.getId()),
-        messageCaptor.capture()
-    );
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
 
     WebSocketMessage message = messageCaptor.getValue();
     assertThat(message.getJobId()).isEqualTo(1L);
@@ -62,16 +72,24 @@ class WebSocketServiceTest {
   }
 
   @Test
-  void shouldSendJobComplete() {
+  void shouldSendJobCompleteToBothTopics() {
+    // When
+    webSocketService.sendJobComplete(job);
+
+    // Then
+    verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
+  }
+
+  @Test
+  void shouldSendJobCompleteWithCorrectMessage() {
     // When
     webSocketService.sendJobComplete(job);
 
     // Then
     ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
-    verify(messagingTemplate).convertAndSend(
-        eq("/topic/conversions/" + job.getId()),
-        messageCaptor.capture()
-    );
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
 
     WebSocketMessage message = messageCaptor.getValue();
     assertThat(message.getJobId()).isEqualTo(1L);
@@ -79,16 +97,24 @@ class WebSocketServiceTest {
   }
 
   @Test
-  void shouldSendJobError() {
+  void shouldSendJobErrorToBothTopics() {
+    // When
+    webSocketService.sendJobError(job, "Test error message");
+
+    // Then
+    verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
+  }
+
+  @Test
+  void shouldSendJobErrorWithCorrectMessage() {
     // When
     webSocketService.sendJobError(job, "Test error message");
 
     // Then
     ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
-    verify(messagingTemplate).convertAndSend(
-        eq("/topic/conversions/" + job.getId()),
-        messageCaptor.capture()
-    );
+    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
 
     WebSocketMessage message = messageCaptor.getValue();
     assertThat(message.getJobId()).isEqualTo(1L);

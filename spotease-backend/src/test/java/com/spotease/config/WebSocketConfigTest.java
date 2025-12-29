@@ -27,13 +27,17 @@ class WebSocketConfigTest {
     StompWebSocketEndpointRegistration registration = mock(StompWebSocketEndpointRegistration.class);
 
     when(registry.addEndpoint("/ws/conversions")).thenReturn(registration);
-    when(registration.setAllowedOrigins("http://localhost:5173", "http://localhost:3000"))
+    when(registration.setAllowedOrigins(
+        "http://localhost:5173", "http://localhost:3000",
+        "http://127.0.0.1:5173", "http://127.0.0.1:3000"))
         .thenReturn(registration);
 
     config.registerStompEndpoints(registry);
 
     verify(registry).addEndpoint("/ws/conversions");
-    verify(registration).setAllowedOrigins("http://localhost:5173", "http://localhost:3000");
+    verify(registration).setAllowedOrigins(
+        "http://localhost:5173", "http://localhost:3000",
+        "http://127.0.0.1:5173", "http://127.0.0.1:3000");
     verify(registration).withSockJS();
   }
 }

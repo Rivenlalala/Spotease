@@ -17,28 +17,29 @@ public class WebSocketService {
 
   public void sendJobUpdate(ConversionJob job) {
     WebSocketMessage message = buildMessage(job);
-    String destination = "/topic/conversions/" + job.getId();
-
-    log.debug("Sending WebSocket update to {}: {}", destination, message);
-    messagingTemplate.convertAndSend(destination, message);
+    sendToTopics(job.getId(), message);
+    log.debug("Sending WebSocket update for job {}: {}", job.getId(), message);
   }
 
   public void sendJobComplete(ConversionJob job) {
     WebSocketMessage message = buildMessage(job);
-    String destination = "/topic/conversions/" + job.getId();
-
-    log.info("Sending job completion to {}", destination);
-    messagingTemplate.convertAndSend(destination, message);
+    sendToTopics(job.getId(), message);
+    log.info("Sending job completion for job {}", job.getId());
   }
 
   public void sendJobError(ConversionJob job, String errorMessage) {
     WebSocketMessage message = buildMessage(job);
     message.setStatus(JobStatus.FAILED);
     message.setErrorMessage(errorMessage);
+    sendToTopics(job.getId(), message);
+    log.error("Sending job error for job {}: {}", job.getId(), errorMessage);
+  }
 
-    String destination = "/topic/conversions/" + job.getId();
-    log.error("Sending job error to {}: {}", destination, errorMessage);
-    messagingTemplate.convertAndSend(destination, message);
+  private void sendToTopics(Long jobId, WebSocketMessage message) {
+    // Send to general topic for Dashboard (all jobs)
+    messagingTemplate.convertAndSend("/topic/conversions", message);
+    // Send to job-specific topic for detail views
+    messagingTemplate.convertAndSend("/topic/conversions/" + jobId, message);
   }
 
   private WebSocketMessage buildMessage(ConversionJob job) {
