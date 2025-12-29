@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { playlistsApi } from '@/api/playlists';
 import { conversionsApi } from '@/api/conversions';
 import Layout from '@/components/layout/Layout';
@@ -16,6 +16,7 @@ import { ArrowLeft, ArrowRight } from 'lucide-react';
 const NewConversion = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [sourcePlatform, setSourcePlatform] = useState<Platform | null>(null);
@@ -51,8 +52,11 @@ const NewConversion = () => {
   // Create conversion mutation
   const createConversionMutation = useMutation({
     mutationFn: conversionsApi.createConversion,
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    onSuccess: (_job) => {
+    onSuccess: (job) => {
+      // Invalidate and refetch conversions list
+      queryClient.invalidateQueries({ queryKey: ['conversions'] });
+      // Also add the new job to the cache immediately for faster UI
+      queryClient.setQueryData(['conversion', job.id], job);
       toast({
         title: 'Conversion started',
         description: 'Your playlist conversion is now in progress',
