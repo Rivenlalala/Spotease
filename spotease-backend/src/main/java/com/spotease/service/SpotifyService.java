@@ -199,6 +199,7 @@ public class SpotifyService {
     dto.setId(playlist.getId());
     dto.setName(playlist.getName());
     dto.setDescription(playlist.getDescription());
+    dto.setCoverImageUrl(selectMediumImage(playlist.getImages()));
     dto.setTotalTracks(playlist.getTracks().getTotal());
     return dto;
   }
