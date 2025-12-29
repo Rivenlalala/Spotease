@@ -11,9 +11,12 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
@@ -164,6 +167,15 @@ class AuthControllerTest {
         .andExpect(header().string("Location", "http://127.0.0.1:5173/"));
 
     verify(authService).handleSpotifyCallback("test-code");
+
+    // Verify session contains userId
+    assertThat(session.getAttribute("userId")).isEqualTo(1L);
+
+    // Verify Spring Security authentication was set
+    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+    assertThat(auth).isNotNull();
+    assertThat(auth.getPrincipal()).isEqualTo(1L);
+    assertThat(auth.isAuthenticated()).isTrue();
   }
 
   @Test

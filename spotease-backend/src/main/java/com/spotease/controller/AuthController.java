@@ -9,8 +9,12 @@ import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -59,6 +63,14 @@ public class AuthController {
 
     // Store user in session
     session.setAttribute("userId", user.getId());
+
+    // Set Spring Security authentication
+    Authentication auth = new UsernamePasswordAuthenticationToken(
+        user.getId(),   // principal
+        null,           // credentials
+        List.of()       // authorities
+    );
+    SecurityContextHolder.getContext().setAuthentication(auth);
 
     // Redirect to frontend
     return ResponseEntity.status(HttpStatus.FOUND)
