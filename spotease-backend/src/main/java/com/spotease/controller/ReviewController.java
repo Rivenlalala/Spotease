@@ -220,6 +220,69 @@ public class ReviewController {
   }
 
   /**
+   * Manual search for alternative tracks on destination platform
+   */
+  @GetMapping("/search")
+  public ResponseEntity<?> manualSearch(
+      @PathVariable Long jobId,
+      @RequestParam(required = false) String query,
+      HttpSession session) {
+
+    Long userId = getUserIdFromSession(session);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    if (query == null || query.trim().isEmpty()) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+
+    log.info("Manual search for job {} with query: {}", jobId, query);
+
+    try {
+      // Fetch job
+      ConversionJob job = jobRepository.findById(jobId).orElse(null);
+      if (job == null) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+      }
+
+      // Verify ownership
+      if (!job.getUser().getId().equals(userId)) {
+        log.warn("User {} attempted to search in job {} owned by user {}",
+            userId, jobId, job.getUser().getId());
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+      }
+
+      // Get user
+      User user = job.getUser();
+
+      // Search on destination platform
+      Platform destPlatform = job.getDestinationPlatform();
+
+      if (destPlatform == Platform.SPOTIFY) {
+        String accessToken = tokenEncryption.decrypt(user.getSpotifyAccessToken());
+        List<?> results = spotifyService.searchTrack(accessToken, query);
+        return ResponseEntity.ok(results);
+
+      } else if (destPlatform == Platform.NETEASE) {
+        String cookie = tokenEncryption.decrypt(user.getNeteaseCookie());
+        List<?> results = neteaseService.searchTrack(cookie, query);
+        return ResponseEntity.ok(results);
+
+      } else {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+      }
+
+    } catch (IllegalArgumentException e) {
+      log.error("Invalid request for manual search in job {}: {}", jobId, e.getMessage());
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    } catch (Exception e) {
+      log.error("Failed to perform manual search for job {}: {}", jobId, e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
+  /**
    * Helper method to get userId from HttpSession
    */
   private Long getUserIdFromSession(HttpSession session) {

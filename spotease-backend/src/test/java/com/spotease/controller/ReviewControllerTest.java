@@ -493,4 +493,34 @@ class ReviewControllerTest {
             .param("query", "test"))
         .andExpect(status().isUnauthorized());
   }
+
+  @Test
+  void testManualSearch_ForbiddenWhenUserDoesNotOwnJob() throws Exception {
+    User otherUser = new User();
+    otherUser.setId(2L);
+
+    ConversionJob job = new ConversionJob();
+    job.setId(1L);
+    job.setUser(otherUser);
+
+    when(jobRepository.findById(1L)).thenReturn(Optional.of(job));
+
+    mockMvc.perform(get("/api/conversions/1/matches/search")
+            .param("query", "test")
+            .session(authenticatedSession))
+        .andExpect(status().isForbidden());
+
+    verifyNoInteractions(spotifyService);
+    verifyNoInteractions(neteaseService);
+  }
+
+  @Test
+  void testManualSearch_NotFoundWhenJobDoesNotExist() throws Exception {
+    when(jobRepository.findById(999L)).thenReturn(Optional.empty());
+
+    mockMvc.perform(get("/api/conversions/999/matches/search")
+            .param("query", "test")
+            .session(authenticatedSession))
+        .andExpect(status().isNotFound());
+  }
 }
