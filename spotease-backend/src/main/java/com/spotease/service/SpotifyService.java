@@ -63,12 +63,21 @@ public class SpotifyService {
     }
 
     // Otherwise find the image closest to 300px width
+    // Handle null widths by defaulting to first image
     Image closest = images[0];
     int targetWidth = 300;
-    int minDiff = Math.abs(images[0].getWidth() - targetWidth);
+    Integer firstWidth = images[0].getWidth();
+    if (firstWidth == null) {
+      return images[0].getUrl();
+    }
+    int minDiff = Math.abs(firstWidth - targetWidth);
 
     for (Image image : images) {
-      int diff = Math.abs(image.getWidth() - targetWidth);
+      Integer width = image.getWidth();
+      if (width == null) {
+        continue;
+      }
+      int diff = Math.abs(width - targetWidth);
       if (diff < minDiff) {
         minDiff = diff;
         closest = image;
