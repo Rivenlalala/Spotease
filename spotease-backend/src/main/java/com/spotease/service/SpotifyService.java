@@ -211,6 +211,7 @@ public class SpotifyService {
         .map(se.michaelthelin.spotify.model_objects.specification.ArtistSimplified::getName)
         .collect(Collectors.toList()));
     dto.setAlbum(track.getAlbum().getName());
+    dto.setAlbumImageUrl(selectMediumImage(track.getAlbum().getImages()));
     dto.setDurationMs(track.getDurationMs());
     dto.setIsrc(track.getExternalIds() != null && track.getExternalIds().getExternalIds() != null ?
         track.getExternalIds().getExternalIds().get("isrc") : null);
