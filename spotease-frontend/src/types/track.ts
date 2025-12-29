@@ -39,3 +39,13 @@ export interface TrackMatchCandidate {
   track: Track;
   confidence: number;
 }
+
+// Search result from destination platform
+export interface SearchTrack {
+  id: string;
+  name: string;
+  artists: string[];
+  album: string;
+  albumImageUrl?: string;
+  duration: number; // in milliseconds
+}
