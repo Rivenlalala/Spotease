@@ -21,7 +21,6 @@ server:
         same-site: lax
         secure: true
         http-only: true
-        domain: .rivenlalala.xyz
 
 spotease:
   encryption:

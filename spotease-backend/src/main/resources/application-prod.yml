@@ -1,0 +1,17 @@
+server:
+  servlet:
+    session:
+      cookie:
+        domain: .rivenlalala.xyz
+
+spotease:
+  spotify:
+    redirect-uri: https://api.spotease.rivenlalala.xyz/api/auth/spotify/callback
+
+# CORS for production frontend
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://spotease.rivenlalala.xyz}
+
+logging:
+  level:
+    root: info

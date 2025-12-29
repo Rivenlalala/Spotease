@@ -15,10 +15,6 @@ server:
         secure: false  # Allow HTTP in development
         # domain omitted - doesn't work with 127.0.0.1
 
-logging:
-  level:
-    root: debug
-
 spotease:
   encryption:
     key: ${ENCRYPTION_KEY}
@@ -32,3 +28,7 @@ spotease:
 # CORS for local frontend
 cors:
   allowed-origins: http://127.0.0.1:5173
+
+logging:
+  level:
+    root: debug
