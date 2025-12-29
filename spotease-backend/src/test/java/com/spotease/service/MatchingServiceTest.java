@@ -198,11 +198,11 @@ class MatchingServiceTest {
     NeteaseTrack candidate = createNeteaseTrack("1", "Test Song", List.of("Test Artist"), 240000);
 
     // First call (tier 1 with quotes) returns empty
-    when(neteaseService.searchTrack("\"Test Song\" Test Artist", "token"))
+    when(neteaseService.searchTrack("token", "\"Test Song\" Test Artist"))
         .thenReturn(List.of());
 
     // Second call (tier 2 without quotes) returns results
-    when(neteaseService.searchTrack("Test Song Test Artist", "token"))
+    when(neteaseService.searchTrack("token", "Test Song Test Artist"))
         .thenReturn(List.of(candidate));
 
     TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
@@ -217,15 +217,15 @@ class MatchingServiceTest {
     NeteaseTrack candidate = createNeteaseTrack("1", "Test Song", List.of("Different Artist"), 240000);
 
     // Tier 1 returns empty
-    when(neteaseService.searchTrack("\"Test Song\" Test Artist", "token"))
+    when(neteaseService.searchTrack("token", "\"Test Song\" Test Artist"))
         .thenReturn(List.of());
 
     // Tier 2 returns empty
-    when(neteaseService.searchTrack("Test Song Test Artist", "token"))
+    when(neteaseService.searchTrack("token", "Test Song Test Artist"))
         .thenReturn(List.of());
 
     // Tier 3 (name only) returns results
-    when(neteaseService.searchTrack("Test Song", "token"))
+    when(neteaseService.searchTrack("token", "Test Song"))
         .thenReturn(List.of(candidate));
 
     TrackMatch result = matchingService.findBestMatch(source, Platform.NETEASE, "token", job);
