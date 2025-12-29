@@ -282,6 +282,30 @@ public class MatchingService {
     return null;
   }
 
+  /**
+   * Extract image URL from a track.
+   *
+   * @param track the track (SpotifyTrack or NeteaseTrack)
+   * @return the image URL, or null if not available
+   */
+  private String getImageUrl(Object track) {
+    if (track == null) {
+      return null;
+    }
+
+    if (track instanceof SpotifyTrack) {
+      return ((SpotifyTrack) track).getAlbumImageUrl();
+    } else if (track instanceof NeteaseTrack) {
+      NeteaseTrack neteaseTrack = (NeteaseTrack) track;
+      if (neteaseTrack.getAlbum() != null) {
+        return neteaseTrack.getAlbum().getPicUrl();
+      }
+      return null;
+    }
+
+    throw new IllegalArgumentException("Unsupported track type: " + track.getClass().getName());
+  }
+
   private double scoreCandidate(Object source, Object candidate) {
     double totalScore = 0.0;
     double totalWeight = 0.0;
