@@ -4,14 +4,16 @@ import com.spotease.dto.netease.NeteaseQRKey;
 import com.spotease.dto.netease.NeteaseQRStatus;
 import com.spotease.repository.UserRepository;
 import com.spotease.util.TokenEncryption;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
+import se.michaelthelin.spotify.SpotifyApi;
 
 import java.util.function.Function;
 
@@ -29,7 +31,13 @@ class AuthServiceTest {
   private TokenEncryption tokenEncryption;
 
   @Mock
-  private WebClient webClient;
+  private SpotifyApi spotifyApi;
+
+  @Mock
+  private WebClient.Builder webClientBuilder;
+
+  @Mock
+  private WebClient neteaseWebClient;
 
   @Mock
   private WebClient.RequestHeadersUriSpec requestHeadersUriSpec;
@@ -40,8 +48,13 @@ class AuthServiceTest {
   @Mock
   private WebClient.ResponseSpec responseSpec;
 
-  @InjectMocks
   private AuthService authService;
+
+  @BeforeEach
+  void setUp() {
+    authService = new AuthService(userRepository, tokenEncryption, spotifyApi, webClientBuilder);
+    ReflectionTestUtils.setField(authService, "neteaseWebClient", neteaseWebClient);
+  }
 
   @Test
   void testGenerateNeteaseQRKey_Success() {
@@ -52,8 +65,8 @@ class AuthServiceTest {
     data.setUnikey("test-qr-key-123");
     qrKey.setData(data);
 
-    when(webClient.get()).thenReturn(requestHeadersUriSpec);
-    when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
+    when(neteaseWebClient.get()).thenReturn(requestHeadersUriSpec);
+    when(requestHeadersUriSpec.uri("/login/qr/key")).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
     when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
         .thenReturn(Mono.just(qrKey));
@@ -63,7 +76,7 @@ class AuthServiceTest {
 
     // Assert
     assertThat(result).isEqualTo("test-qr-key-123");
-    verify(webClient).get();
+    verify(neteaseWebClient).get();
   }
 
   @Test
@@ -73,7 +86,7 @@ class AuthServiceTest {
     status.setCode(801);
     status.setMessage("等待扫码");
 
-    when(webClient.get()).thenReturn(requestHeadersUriSpec);
+    when(neteaseWebClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
     when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
@@ -95,7 +108,7 @@ class AuthServiceTest {
     status.setCookie("MUSIC_U=test_cookie_value");
     status.setMessage("授权登录成功");
 
-    when(webClient.get()).thenReturn(requestHeadersUriSpec);
+    when(neteaseWebClient.get()).thenReturn(requestHeadersUriSpec);
     when(requestHeadersUriSpec.uri(any(Function.class))).thenReturn(requestHeadersSpec);
     when(requestHeadersSpec.retrieve()).thenReturn(responseSpec);
     when(responseSpec.bodyToMono(any(ParameterizedTypeReference.class)))
