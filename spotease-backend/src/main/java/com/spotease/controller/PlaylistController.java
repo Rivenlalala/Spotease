@@ -83,6 +83,52 @@ public class PlaylistController {
     }
   }
 
+  @GetMapping("/{platform}/{playlistId}")
+  public ResponseEntity<?> getPlaylistById(
+      @PathVariable String platform,
+      @PathVariable String playlistId,
+      HttpSession session) {
+
+    Long userId = getUserIdFromSession(session);
+    if (userId == null) {
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    }
+
+    // Validate platform
+    if (!platform.equalsIgnoreCase("spotify") && !platform.equalsIgnoreCase("netease")) {
+      return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+    }
+
+    log.info("Fetching {} playlist {} for user {}", platform, playlistId, userId);
+
+    User user = userRepository.findById(userId).orElse(null);
+    if (user == null) {
+      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+    }
+
+    try {
+      if (platform.equalsIgnoreCase("spotify")) {
+        if (user.getSpotifyAccessToken() == null) {
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+        String accessToken = tokenEncryption.decrypt(user.getSpotifyAccessToken());
+        SpotifyPlaylist playlist = spotifyService.getPlaylistById(accessToken, playlistId);
+        return ResponseEntity.ok(playlist);
+
+      } else { // netease
+        if (user.getNeteaseCookie() == null) {
+          return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+        }
+        String cookie = tokenEncryption.decrypt(user.getNeteaseCookie());
+        NeteasePlaylist playlist = neteaseService.getPlaylistById(cookie, playlistId);
+        return ResponseEntity.ok(playlist);
+      }
+    } catch (Exception e) {
+      log.error("Failed to fetch {} playlist {}: {}", platform, playlistId, e.getMessage(), e);
+      return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+    }
+  }
+
   private Long getUserIdFromSession(HttpSession session) {
     if (session == null) {
       return null;
