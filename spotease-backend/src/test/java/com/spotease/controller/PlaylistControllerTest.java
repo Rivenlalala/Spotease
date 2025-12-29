@@ -1,5 +1,6 @@
 package com.spotease.controller;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.spotease.dto.netease.NeteasePlaylist;
 import com.spotease.dto.spotify.SpotifyPlaylist;
 import com.spotease.model.User;
@@ -32,6 +33,8 @@ class PlaylistControllerTest {
 
   private MockMvc mockMvc;
 
+  private ObjectMapper objectMapper;
+
   @Mock
   private SpotifyService spotifyService;
 
@@ -48,21 +51,28 @@ class PlaylistControllerTest {
   private PlaylistController playlistController;
 
   private MockHttpSession authenticatedSession;
-  private User testUser;
+  private User user;
 
   @BeforeEach
   void setUp() {
+    // Set up MockMvc with standalone setup
     mockMvc = MockMvcBuilders.standaloneSetup(playlistController).build();
 
+    // Initialize ObjectMapper for JSON handling
+    objectMapper = new ObjectMapper();
+    objectMapper.findAndRegisterModules(); // Register JavaTimeModule for LocalDateTime
+
+    // Create authenticated session
     authenticatedSession = new MockHttpSession();
     authenticatedSession.setAttribute("userId", 1L);
 
-    testUser = new User();
-    testUser.setId(1L);
-    testUser.setEmail("test@example.com");
-    testUser.setSpotifyUserId("spotify123");
-    testUser.setSpotifyAccessToken("encrypted_spotify_token");
-    testUser.setNeteaseUserId(456L);
-    testUser.setNeteaseCookie("encrypted_netease_cookie");
+    // Create test user with platform credentials
+    user = new User();
+    user.setId(1L);
+    user.setEmail("test@example.com");
+    user.setSpotifyUserId("spotify123");
+    user.setSpotifyAccessToken("encrypted_spotify_token");
+    user.setNeteaseUserId(456L);
+    user.setNeteaseCookie("encrypted_netease_cookie");
   }
 }
