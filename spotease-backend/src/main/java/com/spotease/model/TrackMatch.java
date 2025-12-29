@@ -34,11 +34,14 @@ public class TrackMatch {
 
   private String sourceISRC;
 
+  private String sourceImageUrl;
+
   // Destination track info
   private String destinationTrackId;
   private String destinationTrackName;
   private String destinationArtist;
   private Integer destinationDuration;  // in seconds
+  private String destinationImageUrl;
 
   // Match metadata
   private Double matchConfidence;  // 0.0 - 1.0

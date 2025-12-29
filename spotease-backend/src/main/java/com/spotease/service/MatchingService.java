@@ -409,12 +409,14 @@ public class MatchingService {
     match.setSourceAlbum(getAlbumName(sourceTrack));
     match.setSourceDuration(getDurationInSeconds(sourceTrack));
     match.setSourceISRC(getIsrc(sourceTrack));
+    match.setSourceImageUrl(getImageUrl(sourceTrack));
 
     // Destination track info
     match.setDestinationTrackId(getTrackId(destinationTrack));
     match.setDestinationTrackName(getTrackName(destinationTrack));
     match.setDestinationArtist(getFirstArtist(destinationTrack));
     match.setDestinationDuration(getDurationInSeconds(destinationTrack));
+    match.setDestinationImageUrl(getImageUrl(destinationTrack));
 
     // Match metadata
     match.setMatchConfidence(score);
