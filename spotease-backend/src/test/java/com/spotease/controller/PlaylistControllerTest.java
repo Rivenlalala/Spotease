@@ -75,4 +75,64 @@ class PlaylistControllerTest {
     user.setNeteaseUserId(456L);
     user.setNeteaseCookie("encrypted_netease_cookie");
   }
+
+  @Test
+  void testGetSpotifyPlaylists_Success() throws Exception {
+    // Arrange
+    SpotifyPlaylist playlist1 = new SpotifyPlaylist();
+    playlist1.setId("playlist1");
+    playlist1.setName("My Playlist");
+    playlist1.setDescription("Test description");
+    playlist1.setTrackCount(10);
+
+    SpotifyPlaylist playlist2 = new SpotifyPlaylist();
+    playlist2.setId("playlist2");
+    playlist2.setName("Another Playlist");
+    playlist2.setTrackCount(20);
+
+    List<SpotifyPlaylist> playlists = Arrays.asList(playlist1, playlist2);
+
+    when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+    when(tokenEncryption.decrypt("encrypted_spotify_token")).thenReturn("decrypted_token");
+    when(spotifyService.getPlaylists("decrypted_token")).thenReturn(playlists);
+
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/spotify")
+            .session(authenticatedSession))
+        .andExpect(status().isOk())
+        .andExpect(jsonPath("$", hasSize(2)))
+        .andExpect(jsonPath("$[0].id", is("playlist1")))
+        .andExpect(jsonPath("$[0].name", is("My Playlist")))
+        .andExpect(jsonPath("$[0].trackCount", is(10)))
+        .andExpect(jsonPath("$[1].id", is("playlist2")))
+        .andExpect(jsonPath("$[1].name", is("Another Playlist")));
+
+    verify(userRepository).findById(1L);
+    verify(tokenEncryption).decrypt("encrypted_spotify_token");
+    verify(spotifyService).getPlaylists("decrypted_token");
+  }
+
+  @Test
+  void testGetSpotifyPlaylists_Unauthorized() throws Exception {
+    // Act & Assert - no session
+    mockMvc.perform(get("/api/playlists/spotify"))
+        .andExpect(status().isUnauthorized());
+
+    verifyNoInteractions(spotifyService);
+  }
+
+  @Test
+  void testGetSpotifyPlaylists_UserNotFound() throws Exception {
+    // Arrange
+    when(userRepository.findById(1L)).thenReturn(Optional.empty());
+
+    // Act & Assert
+    mockMvc.perform(get("/api/playlists/spotify")
+            .session(authenticatedSession))
+        .andExpect(status().isNotFound());
+
+    verify(userRepository).findById(1L);
+    verifyNoInteractions(tokenEncryption);
+    verifyNoInteractions(spotifyService);
+  }
 }
