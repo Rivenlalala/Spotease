@@ -160,4 +160,13 @@ public class AuthService {
       throw new RuntimeException("Failed to check NetEase QR status", e);
     }
   }
+
+  public User handleNeteaseQRLogin(Long userId, String cookie) {
+    // TODO: Implement NetEase QR login handling
+    // 1. Find user by userId
+    // 2. Extract NetEase user ID from cookie
+    // 3. Store encrypted cookie and NetEase user ID
+    // 4. Return updated user
+    throw new UnsupportedOperationException("NetEase QR login handling not yet implemented");
+  }
 }
