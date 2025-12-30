@@ -2,6 +2,53 @@ import apiClient from "./client";
 import type { ConversionJob, CreateConversionRequest } from "@/types/conversion";
 import type { SearchTrack, TrackMatch } from "@/types/track";
 
+// Raw response types from backend (matching JSON field names)
+interface SpotifyTrackResponse {
+  id: string;
+  name: string;
+  artists: string[];
+  album: string;
+  duration_ms: number;
+  albumImageUrl?: string;
+}
+
+interface NeteaseTrackResponse {
+  id: string;
+  name: string;
+  ar: { id: string; name: string }[];
+  al: { id: string; name: string; picUrl?: string };
+  dt: number;
+}
+
+type RawSearchTrack = SpotifyTrackResponse | NeteaseTrackResponse;
+
+// Normalize search results to a common format
+function normalizeSearchTrack(raw: RawSearchTrack): SearchTrack {
+  // Check if it's a Spotify track (has duration_ms)
+  if ("duration_ms" in raw) {
+    const spotify = raw as SpotifyTrackResponse;
+    return {
+      id: spotify.id,
+      name: spotify.name,
+      artists: spotify.artists || [],
+      album: spotify.album || "",
+      albumImageUrl: spotify.albumImageUrl,
+      duration: spotify.duration_ms,
+    };
+  }
+
+  // It's a NetEase track (has dt for duration)
+  const netease = raw as NeteaseTrackResponse;
+  return {
+    id: String(netease.id),
+    name: netease.name,
+    artists: netease.ar?.map((a) => a.name) || [],
+    album: netease.al?.name || "",
+    albumImageUrl: netease.al?.picUrl,
+    duration: netease.dt,
+  };
+}
+
 export const conversionsApi = {
   // Create new conversion job
   createConversion: async (
@@ -70,10 +117,10 @@ export const conversionsApi = {
     jobId: number,
     query: string
   ): Promise<SearchTrack[]> => {
-    const response = await apiClient.get<SearchTrack[]>(
+    const response = await apiClient.get<RawSearchTrack[]>(
       `/api/conversions/${jobId}/matches/search`,
       { params: { query } }
     );
-    return response.data;
+    return response.data.map(normalizeSearchTrack);
   },
 };
