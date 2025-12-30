@@ -210,10 +210,15 @@ public class NeteaseService {
       if (response == null) {
         throw new RuntimeException("Add tracks response is null");
       }
+      // Treat duplicate tracks as success (track is already in playlist)
+      if (response.isDuplicate()) {
+        return; // Track already exists, goal achieved
+      }
       if (!response.isSuccess()) {
         Integer status = response.getStatus();
         Integer code = response.getBody() != null ? response.getBody().getCode() : null;
-        throw new RuntimeException("NetEase API returned error: status=" + status + ", code=" + code);
+        String message = response.getBody() != null ? response.getBody().getMessage() : null;
+        throw new RuntimeException("NetEase API returned error: status=" + status + ", code=" + code + ", message=" + message);
       }
     } catch (Exception e) {
       throw new RuntimeException("Failed to add tracks to playlist", e);
