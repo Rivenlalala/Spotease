@@ -2,6 +2,7 @@ package com.spotease.controller;
 
 import com.spotease.dto.ApproveMatchRequest;
 import com.spotease.dto.TrackMatchDto;
+import com.spotease.exception.NeteaseSessionExpiredException;
 import com.spotease.model.ConversionJob;
 import com.spotease.model.JobStatus;
 import com.spotease.model.MatchStatus;
@@ -10,6 +11,7 @@ import com.spotease.model.TrackMatch;
 import com.spotease.model.User;
 import com.spotease.repository.ConversionJobRepository;
 import com.spotease.repository.TrackMatchRepository;
+import com.spotease.repository.UserRepository;
 import com.spotease.service.NeteaseService;
 import com.spotease.service.SpotifyService;
 import com.spotease.util.TokenEncryption;
@@ -33,6 +35,7 @@ public class ReviewController {
 
   private final ConversionJobRepository jobRepository;
   private final TrackMatchRepository matchRepository;
+  private final UserRepository userRepository;
   private final SpotifyService spotifyService;
   private final NeteaseService neteaseService;
   private final TokenEncryption tokenEncryption;
@@ -168,6 +171,16 @@ public class ReviewController {
       log.info("Successfully approved match {} and added track to playlist", matchId);
       return ResponseEntity.ok().build();
 
+    } catch (NeteaseSessionExpiredException e) {
+      log.warn("NetEase session expired for user {} while approving match {}", userId, matchId);
+      // Clear the user's NetEase cookie from database
+      User user = job.getUser();
+      user.setNeteaseCookie(null);
+      user.setNeteaseUserId(null);
+      userRepository.save(user);
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .header("X-Session-Expired", "netease")
+          .build();
     } catch (IllegalArgumentException e) {
       log.error("Invalid request for approving match {}: {}", matchId, e.getMessage());
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
@@ -293,6 +306,19 @@ public class ReviewController {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
       }
 
+    } catch (NeteaseSessionExpiredException e) {
+      log.warn("NetEase session expired for user {} while searching in job {}", userId, jobId);
+      // Clear the user's NetEase cookie from database
+      ConversionJob job = jobRepository.findById(jobId).orElse(null);
+      if (job != null) {
+        User user = job.getUser();
+        user.setNeteaseCookie(null);
+        user.setNeteaseUserId(null);
+        userRepository.save(user);
+      }
+      return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+          .header("X-Session-Expired", "netease")
+          .build();
     } catch (IllegalArgumentException e) {
       log.error("Invalid request for manual search in job {}: {}", jobId, e.getMessage());
       return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();

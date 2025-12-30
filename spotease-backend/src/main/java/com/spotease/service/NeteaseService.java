@@ -5,8 +5,10 @@ import com.spotease.dto.netease.NeteasePlaylistDetailResponse;
 import com.spotease.dto.netease.NeteasePlaylistTracksResponse;
 import com.spotease.dto.netease.NeteaseResponse;
 import com.spotease.dto.netease.NeteaseTrack;
+import com.spotease.exception.NeteaseSessionExpiredException;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.stereotype.Service;
@@ -18,6 +20,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class NeteaseService {
 
   private final WebClient.Builder webClientBuilder;
@@ -178,11 +181,18 @@ public class NeteaseService {
       if (response == null) {
         throw new RuntimeException("Search response is null");
       }
+      // Check for session expired (code 301)
+      if (response.getCode() == 301) {
+        log.warn("NetEase session expired while searching tracks");
+        throw new NeteaseSessionExpiredException();
+      }
       if (response.getCode() != 200) {
         throw new RuntimeException("NetEase API returned error code: " + response.getCode());
       }
 
       return response.getResult() != null ? response.getResult().getSongs() : List.of();
+    } catch (NeteaseSessionExpiredException e) {
+      throw e; // Re-throw session expired exception
     } catch (Exception e) {
       throw new RuntimeException("Failed to search tracks", e);
     }
@@ -210,6 +220,11 @@ public class NeteaseService {
       if (response == null) {
         throw new RuntimeException("Add tracks response is null");
       }
+      // Check for session expired (code 301 at top level)
+      if (response.isSessionExpired()) {
+        log.warn("NetEase session expired while adding tracks to playlist");
+        throw new NeteaseSessionExpiredException();
+      }
       // Treat duplicate tracks as success (track is already in playlist)
       if (response.isDuplicate()) {
         return; // Track already exists, goal achieved
@@ -220,6 +235,8 @@ public class NeteaseService {
         String message = response.getBody() != null ? response.getBody().getMessage() : null;
         throw new RuntimeException("NetEase API returned error: status=" + status + ", code=" + code + ", message=" + message);
       }
+    } catch (NeteaseSessionExpiredException e) {
+      throw e; // Re-throw session expired exception
     } catch (Exception e) {
       throw new RuntimeException("Failed to add tracks to playlist", e);
     }
