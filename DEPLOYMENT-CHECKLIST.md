@@ -59,11 +59,11 @@ mkdir -p nginx/certbot/conf nginx/certbot/www
 
 ### 2.2 Start Temporary Nginx
 ```bash
-docker-compose -f docker-compose.certbot.yml up nginx-temp -d
+docker compose -f docker-compose.certbot.yml up nginx-temp -d
 ```
 
 ### 2.3 Generate Certificates
-⚠️ **Important**: Replace `your-email@example.com` with your actual email!
+> **Important**: Replace `your-email@example.com` with your actual email!
 
 ```bash
 # Edit the certbot command first:
@@ -71,12 +71,12 @@ nano docker-compose.certbot.yml
 # Change: your-email@example.com → your-actual-email@example.com
 
 # Generate certificates
-docker-compose -f docker-compose.certbot.yml run --rm certbot
+docker compose -f docker-compose.certbot.yml run --rm certbot
 ```
 
 ### 2.4 Stop Temporary Nginx
 ```bash
-docker-compose -f docker-compose.certbot.yml down
+docker compose -f docker-compose.certbot.yml down
 ```
 
 ---
@@ -101,11 +101,16 @@ ENCRYPTION_KEY=<GENERATE_32_CHAR_KEY>
 # Spotify OAuth (from Spotify Developer Dashboard)
 SPOTIFY_CLIENT_ID=<YOUR_SPOTIFY_CLIENT_ID>
 SPOTIFY_CLIENT_SECRET=<YOUR_SPOTIFY_CLIENT_SECRET>
-
-# URLs
-NETEASE_API_URL=https://netease-api.rivenlalala.xyz
 SPOTIFY_REDIRECT_URI=https://api.spotease.rivenlalala.xyz/api/auth/spotify/callback
+
+# NetEase API
+NETEASE_API_URL=https://netease-api.rivenlalala.xyz
+
+# Frontend URL (used for CORS)
 FRONTEND_URL=https://spotease.rivenlalala.xyz
+
+# Environment
+ENVIRONMENT=production
 ```
 
 ### 3.3 Generate Secure Passwords and Keys
@@ -136,27 +141,27 @@ Save `.env` file (Ctrl+X, Y, Enter)
 
 ### 5.1 Build and Start All Services
 ```bash
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 This will:
 - Build backend and frontend Docker images
 - Start PostgreSQL database
-- Start backend API
-- Start frontend web app
+- Start backend API (with health checks)
+- Start frontend web app (with security headers)
 - Start Nginx reverse proxy
 - Start Certbot certificate renewal service
 
 ### 5.2 Monitor Deployment
 ```bash
-# Check all containers are running
-docker-compose ps
+# Check all containers are running and healthy
+docker compose ps
 
 # Watch logs (Ctrl+C to exit)
-docker-compose logs -f
+docker compose logs -f
 
 # Check specific service
-docker-compose logs -f backend
+docker compose logs -f backend
 ```
 
 ---
@@ -168,7 +173,7 @@ docker-compose logs -f backend
 # Check backend health endpoint
 curl https://api.spotease.rivenlalala.xyz/api/health
 
-# Expected response: {"status":"UP"}
+# Expected response: {"status":"UP","timestamp":"...","service":"spotease-backend"}
 
 # Check frontend loads
 curl -I https://spotease.rivenlalala.xyz
@@ -210,7 +215,7 @@ Go to: **GitHub Repository → Settings → Secrets and variables → Actions �
 Add these 8 secrets:
 
 | Secret Name | Value | Where to Get |
-|------------|-------|--------------|
+|------------|-------|--------------
 | `VPS_SSH_KEY` | Private key content | Output from `cat ~/.ssh/spotease_deploy` |
 | `VPS_USER` | SSH username | Your VPS username (e.g., `root`, `ubuntu`) |
 | `VPS_HOST` | VPS IP address | Your VPS IP |
@@ -270,21 +275,21 @@ systemctl start fail2ban
 ### View Logs
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f postgres
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f postgres
 ```
 
 ### Restart Services
 ```bash
 # Restart specific service
-docker-compose restart backend
+docker compose restart backend
 
 # Restart all services
-docker-compose restart
+docker compose restart
 ```
 
 ### Update Application
@@ -295,7 +300,7 @@ git push origin main
 # Manual
 cd ~/spotease
 git pull origin main
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### Database Backup
@@ -305,6 +310,15 @@ docker exec spotease-postgres pg_dump -U spotease_user spotease > backup-$(date 
 
 # Restore from backup
 cat backup-20250128.sql | docker exec -i spotease-postgres psql -U spotease_user spotease
+```
+
+### Check Container Health
+```bash
+# View health status
+docker compose ps
+
+# Detailed health info
+docker inspect --format='{{json .State.Health}}' spotease-backend | jq
 ```
 
 ---
@@ -318,31 +332,31 @@ dig spotease.rivenlalala.xyz
 dig api.spotease.rivenlalala.xyz
 
 # Regenerate certificates
-docker-compose -f docker-compose.certbot.yml up nginx-temp -d
-docker-compose -f docker-compose.certbot.yml run --rm certbot
-docker-compose -f docker-compose.certbot.yml down
-docker-compose restart nginx
+docker compose -f docker-compose.certbot.yml up nginx-temp -d
+docker compose -f docker-compose.certbot.yml run --rm certbot
+docker compose -f docker-compose.certbot.yml down
+docker compose restart nginx
 ```
 
 ### Backend Can't Connect to Database
 ```bash
 # Check PostgreSQL is running
-docker-compose ps postgres
+docker compose ps postgres
 
 # Check PostgreSQL logs
-docker-compose logs postgres
+docker compose logs postgres
 
 # Test connection from backend
-docker-compose exec backend ping postgres
+docker compose exec backend wget -qO- http://localhost:8080/api/health
 ```
 
 ### Frontend Shows CORS Errors
 ```bash
 # Verify environment variables
-cat .env | grep CORS
+cat .env | grep FRONTEND
 
 # Restart backend
-docker-compose restart backend
+docker compose restart backend
 ```
 
 ### Deployment Fails
@@ -361,23 +375,39 @@ docker system prune -f
 
 ```bash
 # Start stack
-docker-compose up -d
+docker compose up -d
 
 # Stop stack
-docker-compose down
+docker compose down
 
 # Rebuild and restart
-docker-compose up -d --build
+docker compose up -d --build
 
-# Check status
-docker-compose ps
+# Check status (with health)
+docker compose ps
 
 # View logs
-docker-compose logs -f
+docker compose logs -f
 
 # Clean up
 docker system prune -f
+
+# Check resource usage
+docker stats
 ```
+
+---
+
+## Container Features Summary
+
+| Feature | Description |
+|---------|-------------|
+| Health Checks | All containers monitored, auto-restart on failure |
+| Resource Limits | CPU/memory limits prevent runaway processes |
+| Non-root Users | Containers run as unprivileged users |
+| Security Headers | CSP, X-Frame-Options, etc. on frontend |
+| Log Rotation | Logs capped at 10MB, 3 files max |
+| Gzip Compression | Enabled on frontend for faster loading |
 
 ---
 
@@ -389,4 +419,4 @@ For detailed instructions, see:
 
 ---
 
-**Last Updated**: 2025-12-28
+**Last Updated**: 2025-12-31

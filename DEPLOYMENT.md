@@ -11,6 +11,24 @@ This document describes how to deploy Spotease to your VPS.
   - `api.spotease.rivenlalala.xyz` → VPS IP
 - GitHub repository with Actions enabled
 
+## Architecture Overview
+
+```
+Internet
+  ↓
+Nginx Reverse Proxy (SSL termination, port 80/443)
+  ├─→ spotease.rivenlalala.xyz → Frontend Container (Nginx + React static files)
+  └─→ api.spotease.rivenlalala.xyz → Backend Container (Spring Boot:8080)
+                                        └─→ PostgreSQL Container (internal network)
+```
+
+All services run on an isolated Docker bridge network with:
+- Health checks for all containers
+- Resource limits (CPU/memory)
+- Log rotation
+- Non-root users in containers
+- Security headers on frontend
+
 ## Initial VPS Setup
 
 ### 1. Install Docker
@@ -48,14 +66,18 @@ git clone https://github.com/yourusername/spotease.git .
 # Create certificate directories
 mkdir -p nginx/certbot/conf nginx/certbot/www
 
-# Start temporary Nginx for ACME challenge
-docker-compose -f docker-compose.certbot.yml up nginx-temp -d
+# Edit certbot config to use your email
+nano docker-compose.certbot.yml
+# Change: your-email@example.com → your-actual-email@example.com
 
-# Generate certificates (replace email)
-docker-compose -f docker-compose.certbot.yml run --rm certbot
+# Start temporary Nginx for ACME challenge
+docker compose -f docker-compose.certbot.yml up nginx-temp -d
+
+# Generate certificates
+docker compose -f docker-compose.certbot.yml run --rm certbot
 
 # Stop temporary Nginx
-docker-compose -f docker-compose.certbot.yml down
+docker compose -f docker-compose.certbot.yml down
 ```
 
 ### 4. Configure Environment Variables
@@ -63,14 +85,27 @@ docker-compose -f docker-compose.certbot.yml down
 Create `.env` file in project root:
 
 ```bash
-cat > .env << EOF
+cat > .env << 'EOF'
+# Database
 DB_USER=spotease_user
 DB_PASSWORD=<generate-strong-password>
+
+# Application Security
 ENCRYPTION_KEY=<generate-32-character-key>
+
+# Spotify OAuth
 SPOTIFY_CLIENT_ID=<your-spotify-client-id>
 SPOTIFY_CLIENT_SECRET=<your-spotify-client-secret>
+SPOTIFY_REDIRECT_URI=https://api.spotease.rivenlalala.xyz/api/auth/spotify/callback
+
+# NetEase API
 NETEASE_API_URL=https://netease-api.rivenlalala.xyz
-CORS_ALLOWED_ORIGINS=https://spotease.rivenlalala.xyz
+
+# Frontend URL (used for CORS)
+FRONTEND_URL=https://spotease.rivenlalala.xyz
+
+# Environment
+ENVIRONMENT=production
 EOF
 ```
 
@@ -80,20 +115,20 @@ EOF
 openssl rand -base64 24
 
 # Encryption key (use first 32 characters)
-openssl rand -base64 32
+openssl rand -base64 32 | head -c 32
 ```
 
 ### 5. Start Application
 
 ```bash
 # Build and start all services
-docker-compose up -d
+docker compose up -d
 
 # Verify services are running
-docker-compose ps
+docker compose ps
 
 # Check logs
-docker-compose logs -f
+docker compose logs -f
 ```
 
 ### 6. Verify Deployment
@@ -101,6 +136,8 @@ docker-compose logs -f
 ```bash
 # Check backend health
 curl https://api.spotease.rivenlalala.xyz/api/health
+
+# Expected response: {"status":"UP","timestamp":"...","service":"spotease-backend"}
 
 # Check frontend
 curl -I https://spotease.rivenlalala.xyz
@@ -172,7 +209,7 @@ git push origin main
 ### 1. Start PostgreSQL
 
 ```bash
-docker-compose -f docker-compose.dev.yml up -d
+docker compose -f docker-compose.dev.yml up -d
 ```
 
 ### 2. Start Backend
@@ -190,9 +227,36 @@ npm run dev
 ```
 
 Access:
-- Frontend: http://localhost:5173
-- Backend API: http://localhost:8080
+- Frontend: http://127.0.0.1:5173
+- Backend API: http://127.0.0.1:8080
 - PostgreSQL: localhost:5432
+
+## Container Features
+
+### Health Checks
+
+All containers have health checks configured:
+- **PostgreSQL:** `pg_isready` command
+- **Backend:** HTTP check to `/api/health`
+- **Frontend:** HTTP check to `/health`
+- **Nginx:** HTTP check
+
+### Resource Limits
+
+| Service | CPU Limit | Memory Limit |
+|---------|-----------|--------------|
+| PostgreSQL | 2.0 | 2G |
+| Backend | 2.0 | 1G |
+| Frontend | 0.5 | 256M |
+| Nginx | 1.0 | 512M |
+
+### Security Features
+
+- Non-root users in all containers
+- Security headers on frontend (CSP, X-Frame-Options, etc.)
+- Rate limiting on API (10 req/s with burst of 20)
+- Gzip compression enabled
+- SSL/TLS 1.2+ only
 
 ## Maintenance
 
@@ -200,22 +264,22 @@ Access:
 
 ```bash
 # All services
-docker-compose logs -f
+docker compose logs -f
 
 # Specific service
-docker-compose logs -f backend
-docker-compose logs -f frontend
-docker-compose logs -f postgres
+docker compose logs -f backend
+docker compose logs -f frontend
+docker compose logs -f postgres
 ```
 
 ### Restart Services
 
 ```bash
 # Restart specific service
-docker-compose restart backend
+docker compose restart backend
 
 # Restart all services
-docker-compose restart
+docker compose restart
 ```
 
 ### Update Application
@@ -225,17 +289,17 @@ docker-compose restart
 git pull origin main
 
 # Rebuild and restart
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ### Database Backup
 
 ```bash
 # Create backup
-docker exec spotease-postgres-1 pg_dump -U spotease_user spotease > backup-$(date +%Y%m%d).sql
+docker exec spotease-postgres pg_dump -U spotease_user spotease > backup-$(date +%Y%m%d).sql
 
 # Restore backup
-cat backup-20250128.sql | docker exec -i spotease-postgres-1 psql -U spotease_user spotease
+cat backup-20250128.sql | docker exec -i spotease-postgres psql -U spotease_user spotease
 ```
 
 ### Rollback Deployment
@@ -249,7 +313,7 @@ git push origin main
 # Manual rollback
 cd ~/spotease
 git checkout <previous-commit-hash>
-docker-compose up -d --build
+docker compose up -d --build
 ```
 
 ## Troubleshooting
@@ -262,43 +326,57 @@ dig spotease.rivenlalala.xyz
 dig api.spotease.rivenlalala.xyz
 
 # Regenerate certificates
-docker-compose -f docker-compose.certbot.yml up nginx-temp -d
-docker-compose -f docker-compose.certbot.yml run --rm certbot
-docker-compose -f docker-compose.certbot.yml down
-docker-compose restart nginx
+docker compose -f docker-compose.certbot.yml up nginx-temp -d
+docker compose -f docker-compose.certbot.yml run --rm certbot
+docker compose -f docker-compose.certbot.yml down
+docker compose restart nginx
 ```
 
 ### Backend Connection Issues
 
 ```bash
 # Check PostgreSQL is running
-docker-compose ps postgres
+docker compose ps postgres
 
 # Check PostgreSQL logs
-docker-compose logs postgres
+docker compose logs postgres
 
-# Test connection
-docker-compose exec backend ping postgres
+# Check backend health
+docker compose exec backend wget -qO- http://localhost:8080/api/health
 ```
 
 ### Frontend CORS Errors
 
 ```bash
-# Verify CORS_ALLOWED_ORIGINS in .env
-cat .env | grep CORS
+# Verify FRONTEND_URL in .env
+cat .env | grep FRONTEND
 
 # Restart backend
-docker-compose restart backend
+docker compose restart backend
 ```
 
 ### WebSocket Connection Fails
 
 ```bash
 # Check Nginx configuration
-docker-compose exec nginx cat /etc/nginx/nginx.conf | grep -A 5 "WebSocket"
+docker compose exec nginx cat /etc/nginx/nginx.conf | grep -A 5 "WebSocket"
 
 # Restart Nginx
-docker-compose restart nginx
+docker compose restart nginx
+```
+
+### Container Health Check Failures
+
+```bash
+# Check container health status
+docker compose ps
+
+# View health check logs
+docker inspect --format='{{json .State.Health}}' spotease-backend | jq
+
+# Manually test health endpoints
+docker compose exec backend wget -qO- http://localhost:8080/api/health
+docker compose exec frontend wget -qO- http://localhost:80/health
 ```
 
 ## Security Recommendations

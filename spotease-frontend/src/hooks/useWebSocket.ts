@@ -45,7 +45,7 @@ export const useWebSocket = ({ onJobUpdate, enabled = true, jobId }: UseWebSocke
   const connect = useCallback(() => {
     if (!enabled || clientRef.current?.active) return;
 
-    const wsUrl = import.meta.env.VITE_API_URL || "http://localhost:8080";
+    const wsUrl = import.meta.env.VITE_API_BASE_URL || "http://localhost:8080";
     const sockJsUrl = `${wsUrl}/ws/conversions`;
 
     const client = new Client({

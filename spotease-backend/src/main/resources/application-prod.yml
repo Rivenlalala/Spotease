@@ -2,7 +2,7 @@ server:
   servlet:
     session:
       cookie:
-        domain: .rivenlalala.xyz
+        domain: rivenlalala.xyz
 
 spotease:
   spotify:

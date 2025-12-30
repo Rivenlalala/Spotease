@@ -39,14 +39,15 @@ jobs:
           ENCRYPTION_KEY=${{ secrets.ENCRYPTION_KEY }}
           SPOTIFY_CLIENT_ID=${{ secrets.SPOTIFY_CLIENT_ID }}
           SPOTIFY_CLIENT_SECRET=${{ secrets.SPOTIFY_CLIENT_SECRET }}
+          SPOTIFY_REDIRECT_URI=https://api.spotease.rivenlalala.xyz/api/auth/spotify/callback
           NETEASE_API_URL=https://netease-api.rivenlalala.xyz
-          CORS_ALLOWED_ORIGINS=https://spotease.rivenlalala.xyz
+          FRONTEND_URL=https://spotease.rivenlalala.xyz
           EOF
 
             # Deploy with Docker Compose
-            docker-compose down
-            docker-compose build
-            docker-compose up -d
+            docker compose down
+            docker compose build
+            docker compose up -d
 
             # Cleanup
             docker system prune -f
@@ -58,6 +59,6 @@ jobs:
           VPS_HOST: ${{ secrets.VPS_HOST }}
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
-            docker-compose ps
+            docker compose ps
             curl -f https://api.spotease.rivenlalala.xyz/api/health || exit 1
           ENDSSH

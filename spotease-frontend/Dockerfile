@@ -12,6 +12,8 @@ COPY . .
 
 # Build with production environment
 ENV NODE_ENV=production
+ENV VITE_API_BASE_URL=https://api.spotease.rivenlalala.xyz
+ENV VITE_WS_URL=wss://api.spotease.rivenlalala.xyz/ws/conversions
 RUN npm run build
 
 FROM nginx:alpine
