@@ -10,10 +10,10 @@ import org.springframework.context.ApplicationEvent;
 @Getter
 public class ConversionJobCreatedEvent extends ApplicationEvent {
 
-  private final Long jobId;
+    private final Long jobId;
 
-  public ConversionJobCreatedEvent(Object source, Long jobId) {
-    super(source);
-    this.jobId = jobId;
-  }
+    public ConversionJobCreatedEvent(Object source, Long jobId) {
+        super(source);
+        this.jobId = jobId;
+    }
 }

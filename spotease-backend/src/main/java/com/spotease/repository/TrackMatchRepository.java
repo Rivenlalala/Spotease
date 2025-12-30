@@ -10,7 +10,10 @@ import java.util.List;
 @Repository
 public interface TrackMatchRepository extends JpaRepository<TrackMatch, Long> {
     List<TrackMatch> findByConversionJob_Id(Long conversionJobId);
+
     List<TrackMatch> findByConversionJob_IdAndStatus(Long conversionJobId, MatchStatus status);
+
     List<TrackMatch> findByConversionJob_IdAndStatusIn(Long conversionJobId, List<MatchStatus> statuses);
+
     long countByConversionJob_IdAndStatusIn(Long conversionJobId, List<MatchStatus> statuses);
 }

@@ -11,12 +11,12 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class WebSocketMessage {
-  private Long jobId;
-  private JobStatus status;
-  private Integer totalTracks;
-  private Integer processedTracks;
-  private Integer highConfidenceMatches;
-  private Integer lowConfidenceMatches;
-  private Integer failedTracks;
-  private String errorMessage;
+    private Long jobId;
+    private JobStatus status;
+    private Integer totalTracks;
+    private Integer processedTracks;
+    private Integer highConfidenceMatches;
+    private Integer lowConfidenceMatches;
+    private Integer failedTracks;
+    private String errorMessage;
 }

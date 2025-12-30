@@ -6,11 +6,11 @@ package com.spotease.exception;
  */
 public class NeteaseSessionExpiredException extends RuntimeException {
 
-  public NeteaseSessionExpiredException() {
-    super("NetEase session has expired. Please re-login.");
-  }
+    public NeteaseSessionExpiredException() {
+        super("NetEase session has expired. Please re-login.");
+    }
 
-  public NeteaseSessionExpiredException(String message) {
-    super(message);
-  }
+    public NeteaseSessionExpiredException(String message) {
+        super(message);
+    }
 }

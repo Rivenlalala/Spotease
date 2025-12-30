@@ -10,49 +10,49 @@ import java.time.LocalDateTime;
 @Data
 public class TrackMatch {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "conversion_job_id", nullable = false)
-  private ConversionJob conversionJob;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "conversion_job_id", nullable = false)
+    private ConversionJob conversionJob;
 
-  // Source track info
-  @Column(nullable = false)
-  private String sourceTrackId;
+    // Source track info
+    @Column(nullable = false)
+    private String sourceTrackId;
 
-  @Column(nullable = false)
-  private String sourceTrackName;
+    @Column(nullable = false)
+    private String sourceTrackName;
 
-  @Column(nullable = false)
-  private String sourceArtist;
+    @Column(nullable = false)
+    private String sourceArtist;
 
-  private String sourceAlbum;
+    private String sourceAlbum;
 
-  private Integer sourceDuration;  // in seconds
+    private Integer sourceDuration;  // in seconds
 
-  private String sourceISRC;
+    private String sourceISRC;
 
-  private String sourceImageUrl;
+    private String sourceImageUrl;
 
-  // Destination track info
-  private String destinationTrackId;
-  private String destinationTrackName;
-  private String destinationArtist;
-  private Integer destinationDuration;  // in seconds
-  private String destinationImageUrl;
+    // Destination track info
+    private String destinationTrackId;
+    private String destinationTrackName;
+    private String destinationArtist;
+    private Integer destinationDuration;  // in seconds
+    private String destinationImageUrl;
 
-  // Match metadata
-  private Double matchConfidence;  // 0.0 - 1.0
+    // Match metadata
+    private Double matchConfidence;  // 0.0 - 1.0
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private MatchStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private MatchStatus status;
 
-  @Column(length = 1024)
-  private String errorMessage;
+    @Column(length = 1024)
+    private String errorMessage;
 
-  private LocalDateTime reviewedAt;
-  private LocalDateTime appliedAt;
+    private LocalDateTime reviewedAt;
+    private LocalDateTime appliedAt;
 }

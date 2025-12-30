@@ -4,9 +4,12 @@
 
 **Goal:** Replace WebClient-based implementations with production-ready Spotify SDK and NetEase API service integration.
 
-**Architecture:** Use `se.michaelthelin.spotify:spotify-web-api-java:9.4.0` for Spotify integration and NetEase API service at `https://netease-api.rivenlalala.xyz` for NetEase Cloud Music integration. Both services handle authentication, playlist management, and track operations with proper error handling and retry logic.
+**Architecture:** Use `se.michaelthelin.spotify:spotify-web-api-java:9.4.0` for Spotify integration and NetEase API
+service at `https://netease-api.rivenlalala.xyz` for NetEase Cloud Music integration. Both services handle
+authentication, playlist management, and track operations with proper error handling and retry logic.
 
 **Tech Stack:**
+
 - Spotify Web API Java SDK 9.4.0
 - NetEase Cloud Music API (Node.js service)
 - Spring WebClient (for NetEase HTTP calls)
@@ -17,6 +20,7 @@
 ## Task 1: Add Spotify SDK Dependency
 
 **Files:**
+
 - Modify: `pom.xml:24-73`
 
 **Step 1: Add Spotify SDK dependency**
@@ -49,6 +53,7 @@ git commit -m "build: add Spotify Web API Java SDK 9.4.0"
 ## Task 2: Configure NetEase API Base URL
 
 **Files:**
+
 - Modify: `src/main/resources/application.yml:19-26`
 
 **Step 1: Add NetEase API configuration**
@@ -77,6 +82,7 @@ git commit -m "config: add NetEase API base URL configuration"
 ## Task 3: Create Spotify SDK Configuration
 
 **Files:**
+
 - Create: `src/main/java/com/spotease/config/SpotifyConfig.java`
 
 **Step 1: Write the failing test**
@@ -174,6 +180,7 @@ git commit -m "feat: add Spotify SDK configuration with SpotifyApi bean"
 ## Task 4: Refactor AuthService to Use Spotify SDK
 
 **Files:**
+
 - Modify: `src/main/java/com/spotease/service/AuthService.java`
 
 **Step 1: Update imports and inject SpotifyApi**
@@ -203,9 +210,9 @@ import java.time.LocalDateTime;
 @Slf4j
 public class AuthService {
 
-  private final UserRepository userRepository;
-  private final TokenEncryption tokenEncryption;
-  private final SpotifyApi spotifyApi;
+    private final UserRepository userRepository;
+    private final TokenEncryption tokenEncryption;
+    private final SpotifyApi spotifyApi;
 ```
 
 **Step 2: Refactor getSpotifyAuthUrl using SDK**
@@ -215,12 +222,12 @@ Replace method at lines 42-51:
 ```java
   public String getSpotifyAuthUrl(String state) {
     AuthorizationCodeUriRequest authorizationCodeUriRequest = spotifyApi.authorizationCodeUri()
-        .scope("user-read-email,playlist-read-private,playlist-read-collaborative,playlist-modify-public,playlist-modify-private")
-        .state(state)
-        .build();
+            .scope("user-read-email,playlist-read-private,playlist-read-collaborative,playlist-modify-public,playlist-modify-private")
+            .state(state)
+            .build();
 
     return authorizationCodeUriRequest.execute().toString();
-  }
+}
 ```
 
 **Step 3: Refactor handleSpotifyCallback using SDK**
@@ -230,33 +237,33 @@ Replace method at lines 53-71:
 ```java
   public User handleSpotifyCallback(String code) {
     try {
-      // Exchange code for tokens
-      AuthorizationCodeCredentials credentials = exchangeCodeForToken(code);
+        // Exchange code for tokens
+        AuthorizationCodeCredentials credentials = exchangeCodeForToken(code);
 
-      // Create temporary API instance with access token
-      SpotifyApi authenticatedApi = new SpotifyApi.Builder()
-          .setAccessToken(credentials.getAccessToken())
-          .build();
+        // Create temporary API instance with access token
+        SpotifyApi authenticatedApi = new SpotifyApi.Builder()
+                .setAccessToken(credentials.getAccessToken())
+                .build();
 
-      // Get user profile
-      SpotifyUser profile = getSpotifyUserProfile(authenticatedApi);
+        // Get user profile
+        SpotifyUser profile = getSpotifyUserProfile(authenticatedApi);
 
-      // Create or update user
-      User user = userRepository.findBySpotifyUserId(profile.getId())
-          .orElse(new User());
+        // Create or update user
+        User user = userRepository.findBySpotifyUserId(profile.getId())
+                .orElse(new User());
 
-      user.setSpotifyUserId(profile.getId());
-      user.setEmail(profile.getEmail());
-      user.setSpotifyAccessToken(tokenEncryption.encrypt(credentials.getAccessToken()));
-      user.setSpotifyRefreshToken(tokenEncryption.encrypt(credentials.getRefreshToken()));
-      user.setSpotifyTokenExpiry(LocalDateTime.now().plusSeconds(credentials.getExpiresIn()));
+        user.setSpotifyUserId(profile.getId());
+        user.setEmail(profile.getEmail());
+        user.setSpotifyAccessToken(tokenEncryption.encrypt(credentials.getAccessToken()));
+        user.setSpotifyRefreshToken(tokenEncryption.encrypt(credentials.getRefreshToken()));
+        user.setSpotifyTokenExpiry(LocalDateTime.now().plusSeconds(credentials.getExpiresIn()));
 
-      return userRepository.save(user);
+        return userRepository.save(user);
     } catch (Exception e) {
-      log.error("Error handling Spotify callback", e);
-      throw new RuntimeException("Error handling Spotify callback", e);
+        log.error("Error handling Spotify callback", e);
+        throw new RuntimeException("Error handling Spotify callback", e);
     }
-  }
+}
 ```
 
 **Step 4: Refactor exchangeCodeForToken using SDK**
@@ -312,6 +319,7 @@ git commit -m "refactor: migrate AuthService to use Spotify SDK"
 ## Task 5: Refactor SpotifyService to Use Spotify SDK
 
 **Files:**
+
 - Modify: `src/main/java/com/spotease/service/SpotifyService.java`
 
 **Step 1: Update imports and inject SpotifyApi**
@@ -354,22 +362,22 @@ Replace method at lines 26-30:
 ```java
   public List<SpotifyPlaylist> getPlaylists(String accessToken) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+        SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      GetListOfCurrentUsersPlaylistsRequest getPlaylistsRequest = authenticatedApi
-          .getListOfCurrentUsersPlaylists()
-          .limit(50)
-          .build();
+        GetListOfCurrentUsersPlaylistsRequest getPlaylistsRequest = authenticatedApi
+                .getListOfCurrentUsersPlaylists()
+                .limit(50)
+                .build();
 
-      Paging<PlaylistSimplified> playlistPaging = getPlaylistsRequest.execute();
+        Paging<PlaylistSimplified> playlistPaging = getPlaylistsRequest.execute();
 
-      return Arrays.stream(playlistPaging.getItems())
-          .map(this::mapToSpotifyPlaylist)
-          .collect(Collectors.toList());
+        return Arrays.stream(playlistPaging.getItems())
+                .map(this::mapToSpotifyPlaylist)
+                .collect(Collectors.toList());
     } catch (Exception e) {
-      throw new RuntimeException("Failed to get Spotify playlists", e);
+        throw new RuntimeException("Failed to get Spotify playlists", e);
     }
-  }
+}
 ```
 
 **Step 3: Implement getPlaylistTracks using SDK**
@@ -379,24 +387,24 @@ Replace method at lines 32-36:
 ```java
   public List<SpotifyTrack> getPlaylistTracks(String accessToken, String playlistId) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+        SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      GetPlaylistsItemsRequest getPlaylistItemsRequest = authenticatedApi
-          .getPlaylistsItems(playlistId)
-          .limit(100)
-          .build();
+        GetPlaylistsItemsRequest getPlaylistItemsRequest = authenticatedApi
+                .getPlaylistsItems(playlistId)
+                .limit(100)
+                .build();
 
-      Paging<PlaylistTrack> trackPaging = getPlaylistItemsRequest.execute();
+        Paging<PlaylistTrack> trackPaging = getPlaylistItemsRequest.execute();
 
-      return Arrays.stream(trackPaging.getItems())
-          .map(item -> (Track) item.getTrack())
-          .filter(track -> track != null)
-          .map(this::mapToSpotifyTrack)
-          .collect(Collectors.toList());
+        return Arrays.stream(trackPaging.getItems())
+                .map(item -> (Track) item.getTrack())
+                .filter(track -> track != null)
+                .map(this::mapToSpotifyTrack)
+                .collect(Collectors.toList());
     } catch (Exception e) {
-      throw new RuntimeException("Failed to get playlist tracks", e);
+        throw new RuntimeException("Failed to get playlist tracks", e);
     }
-  }
+}
 ```
 
 **Step 4: Implement searchTrack using SDK**
@@ -406,22 +414,22 @@ Replace method at lines 38-42:
 ```java
   public List<SpotifyTrack> searchTrack(String accessToken, String query) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+        SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      SearchTracksRequest searchTracksRequest = authenticatedApi
-          .searchTracks(query)
-          .limit(10)
-          .build();
+        SearchTracksRequest searchTracksRequest = authenticatedApi
+                .searchTracks(query)
+                .limit(10)
+                .build();
 
-      Paging<Track> trackPaging = searchTracksRequest.execute();
+        Paging<Track> trackPaging = searchTracksRequest.execute();
 
-      return Arrays.stream(trackPaging.getItems())
-          .map(this::mapToSpotifyTrack)
-          .collect(Collectors.toList());
+        return Arrays.stream(trackPaging.getItems())
+                .map(this::mapToSpotifyTrack)
+                .collect(Collectors.toList());
     } catch (Exception e) {
-      throw new RuntimeException("Failed to search tracks", e);
+        throw new RuntimeException("Failed to search tracks", e);
     }
-  }
+}
 ```
 
 **Step 5: Implement addTracksToPlaylist using SDK**
@@ -431,17 +439,17 @@ Replace method at lines 44-54:
 ```java
   public void addTracksToPlaylist(String accessToken, String playlistId, List<String> trackUris) {
     try {
-      SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
+        SpotifyApi authenticatedApi = createAuthenticatedApi(accessToken);
 
-      AddItemsToPlaylistRequest addItemsRequest = authenticatedApi
-          .addItemsToPlaylist(playlistId, trackUris.toArray(new String[0]))
-          .build();
+        AddItemsToPlaylistRequest addItemsRequest = authenticatedApi
+                .addItemsToPlaylist(playlistId, trackUris.toArray(new String[0]))
+                .build();
 
-      addItemsRequest.execute();
+        addItemsRequest.execute();
     } catch (Exception e) {
-      throw new RuntimeException("Failed to add tracks to playlist", e);
+        throw new RuntimeException("Failed to add tracks to playlist", e);
     }
-  }
+}
 ```
 
 **Step 6: Add helper methods**
@@ -451,32 +459,32 @@ Add at end of class (after line 54):
 ```java
   private SpotifyApi createAuthenticatedApi(String accessToken) {
     return new SpotifyApi.Builder()
-        .setAccessToken(accessToken)
-        .build();
-  }
+            .setAccessToken(accessToken)
+            .build();
+}
 
-  private SpotifyPlaylist mapToSpotifyPlaylist(PlaylistSimplified playlist) {
+private SpotifyPlaylist mapToSpotifyPlaylist(PlaylistSimplified playlist) {
     SpotifyPlaylist dto = new SpotifyPlaylist();
     dto.setId(playlist.getId());
     dto.setName(playlist.getName());
     dto.setDescription(playlist.getDescription());
     dto.setTrackCount(playlist.getTracks().getTotal());
     return dto;
-  }
+}
 
-  private SpotifyTrack mapToSpotifyTrack(Track track) {
+private SpotifyTrack mapToSpotifyTrack(Track track) {
     SpotifyTrack dto = new SpotifyTrack();
     dto.setId(track.getId());
     dto.setName(track.getName());
     dto.setArtists(Arrays.stream(track.getArtists())
-        .map(se.michaelthelin.spotify.model_objects.specification.ArtistSimplified::getName)
-        .collect(Collectors.toList()));
+            .map(se.michaelthelin.spotify.model_objects.specification.ArtistSimplified::getName)
+            .collect(Collectors.toList()));
     dto.setAlbum(track.getAlbum().getName());
     dto.setDurationMs(track.getDurationMs());
     dto.setIsrc(track.getExternalIds() != null ?
-        track.getExternalIds().get("isrc") : null);
+            track.getExternalIds().get("isrc") : null);
     return dto;
-  }
+}
 ```
 
 **Step 7: Verify compilation**
@@ -496,6 +504,7 @@ git commit -m "refactor: migrate SpotifyService to use Spotify SDK"
 ## Task 6: Update NetEase DTOs Based on API Response
 
 **Files:**
+
 - Modify: `src/main/java/com/spotease/dto/netease/NeteasePlaylist.java`
 - Modify: `src/main/java/com/spotease/dto/netease/NeteaseTrack.java`
 - Create: `src/main/java/com/spotease/dto/netease/NeteaseUserProfile.java`
@@ -513,12 +522,12 @@ import lombok.Data;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NeteasePlaylist {
-  private String id;
-  private String name;
-  private String description;
-  private Integer trackCount;
-  private String coverImgUrl;
-  private Long userId;
+    private String id;
+    private String name;
+    private String description;
+    private Integer trackCount;
+    private String coverImgUrl;
+    private Long userId;
 }
 ```
 
@@ -604,6 +613,7 @@ git commit -m "refactor: update NetEase DTOs to match actual API response schema
 ## Task 7: Create NetEase API Response Wrapper DTOs
 
 **Files:**
+
 - Create: `src/main/java/com/spotease/dto/netease/NeteaseResponse.java`
 
 **Step 1: Create generic response wrapper**
@@ -621,45 +631,45 @@ import java.util.List;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NeteaseResponse<T> {
-  private Integer code;
-  private String message;
-  private T data;
+    private Integer code;
+    private String message;
+    private T data;
 
-  // For account endpoint
-  private NeteaseAccount account;
-  private NeteaseUserProfile profile;
+    // For account endpoint
+    private NeteaseAccount account;
+    private NeteaseUserProfile profile;
 
-  // For playlist list endpoint
-  private List<NeteasePlaylist> playlist;
+    // For playlist list endpoint
+    private List<NeteasePlaylist> playlist;
 
-  // For search endpoint
-  private NeteaseSearchResult result;
+    // For search endpoint
+    private NeteaseSearchResult result;
 
-  @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class NeteaseAccount {
-    private Long id;
-    private String userName;
-  }
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class NeteaseAccount {
+        private Long id;
+        private String userName;
+    }
 
-  @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class NeteasePlaylistWrapper {
-    private NeteasePlaylistDetail playlist;
-  }
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class NeteasePlaylistWrapper {
+        private NeteasePlaylistDetail playlist;
+    }
 
-  @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class NeteasePlaylistDetail extends NeteasePlaylist {
-    private List<NeteaseTrack> tracks;
-  }
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class NeteasePlaylistDetail extends NeteasePlaylist {
+        private List<NeteaseTrack> tracks;
+    }
 
-  @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class NeteaseSearchResult {
-    private List<NeteaseTrack> songs;
-    private Integer songCount;
-  }
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class NeteaseSearchResult {
+        private List<NeteaseTrack> songs;
+        private Integer songCount;
+    }
 }
 ```
 
@@ -680,6 +690,7 @@ git commit -m "feat: add NetEase API response wrapper DTOs"
 ## Task 8: Implement NeteaseService with API Integration
 
 **Files:**
+
 - Modify: `src/main/java/com/spotease/service/NeteaseService.java`
 
 **Step 1: Update imports and inject configuration**
@@ -707,17 +718,17 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class NeteaseService {
 
-  private final WebClient.Builder webClientBuilder;
+    private final WebClient.Builder webClientBuilder;
 
-  @Value("${spotease.netease.api-url}")
-  private String neteaseApiUrl;
+    @Value("${spotease.netease.api-url}")
+    private String neteaseApiUrl;
 
-  private WebClient getWebClient(String cookie) {
-    return webClientBuilder
-        .baseUrl(neteaseApiUrl)
-        .defaultHeader("Cookie", "MUSIC_U=" + cookie)
-        .build();
-  }
+    private WebClient getWebClient(String cookie) {
+        return webClientBuilder
+                .baseUrl(neteaseApiUrl)
+                .defaultHeader("Cookie", "MUSIC_U=" + cookie)
+                .build();
+    }
 ```
 
 **Step 2: Implement getPlaylists**
@@ -727,35 +738,37 @@ Replace method at lines 24-27:
 ```java
   public List<NeteasePlaylist> getPlaylists(String cookie) {
     try {
-      // Get user account to get userId
-      NeteaseResponse<Void> accountResponse = getWebClient(cookie)
-          .get()
-          .uri("/user/account")
-          .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
-          .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
-          .block();
+        // Get user account to get userId
+        NeteaseResponse<Void> accountResponse = getWebClient(cookie)
+                .get()
+                .uri("/user/account")
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+                .block();
 
-      Long userId = accountResponse.getProfile().getUserId();
+        Long userId = accountResponse.getProfile().getUserId();
 
-      // Get user playlists
-      NeteaseResponse<Void> playlistResponse = getWebClient(cookie)
-          .get()
-          .uri(uriBuilder -> uriBuilder
-              .path("/user/playlist")
-              .queryParam("uid", userId)
-              .queryParam("limit", 100)
-              .build())
-          .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
-          .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
-          .block();
+        // Get user playlists
+        NeteaseResponse<Void> playlistResponse = getWebClient(cookie)
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/user/playlist")
+                        .queryParam("uid", userId)
+                        .queryParam("limit", 100)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+                .block();
 
-      return playlistResponse.getPlaylist();
+        return playlistResponse.getPlaylist();
     } catch (Exception e) {
-      throw new RuntimeException("Failed to get NetEase playlists", e);
+        throw new RuntimeException("Failed to get NetEase playlists", e);
     }
-  }
+}
 ```
 
 **Step 3: Implement getPlaylistTracks**
@@ -765,25 +778,26 @@ Replace method at lines 29-32:
 ```java
   public List<NeteaseTrack> getPlaylistTracks(String cookie, String playlistId) {
     try {
-      NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = getWebClient(cookie)
-          .get()
-          .uri(uriBuilder -> uriBuilder
-              .path("/playlist/detail")
-              .queryParam("id", playlistId)
-              .build())
-          .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {})
-          .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
-          .block();
+        NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper> response = getWebClient(cookie)
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/playlist/detail")
+                        .queryParam("id", playlistId)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<NeteaseResponse.NeteasePlaylistWrapper>>() {
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+                .block();
 
-      // Response has {playlist: {tracks: [...]}}
-      return response.getData() != null && response.getData().getPlaylist() != null
-          ? response.getData().getPlaylist().getTracks()
-          : List.of();
+        // Response has {playlist: {tracks: [...]}}
+        return response.getData() != null && response.getData().getPlaylist() != null
+                ? response.getData().getPlaylist().getTracks()
+                : List.of();
     } catch (Exception e) {
-      throw new RuntimeException("Failed to get playlist tracks", e);
+        throw new RuntimeException("Failed to get playlist tracks", e);
     }
-  }
+}
 ```
 
 **Step 4: Implement searchTrack**
@@ -793,24 +807,25 @@ Replace method at lines 34-37:
 ```java
   public List<NeteaseTrack> searchTrack(String cookie, String query) {
     try {
-      NeteaseResponse<Void> response = getWebClient(cookie)
-          .get()
-          .uri(uriBuilder -> uriBuilder
-              .path("/cloudsearch")
-              .queryParam("keywords", query)
-              .queryParam("type", 1)  // 1 = single track
-              .queryParam("limit", 10)
-              .build())
-          .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
-          .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
-          .block();
+        NeteaseResponse<Void> response = getWebClient(cookie)
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/cloudsearch")
+                        .queryParam("keywords", query)
+                        .queryParam("type", 1)  // 1 = single track
+                        .queryParam("limit", 10)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+                .block();
 
-      return response.getResult() != null ? response.getResult().getSongs() : List.of();
+        return response.getResult() != null ? response.getResult().getSongs() : List.of();
     } catch (Exception e) {
-      throw new RuntimeException("Failed to search tracks", e);
+        throw new RuntimeException("Failed to search tracks", e);
     }
-  }
+}
 ```
 
 **Step 5: Implement addTracksToPlaylist**
@@ -820,24 +835,25 @@ Replace method at lines 39-42:
 ```java
   public void addTracksToPlaylist(String cookie, String playlistId, List<String> trackIds) {
     try {
-      String trackIdsParam = String.join(",", trackIds);
+        String trackIdsParam = String.join(",", trackIds);
 
-      getWebClient(cookie)
-          .get()
-          .uri(uriBuilder -> uriBuilder
-              .path("/playlist/tracks")
-              .queryParam("op", "add")
-              .queryParam("pid", playlistId)
-              .queryParam("tracks", trackIdsParam)
-              .build())
-          .retrieve()
-          .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {})
-          .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
-          .block();
+        getWebClient(cookie)
+                .get()
+                .uri(uriBuilder -> uriBuilder
+                        .path("/playlist/tracks")
+                        .queryParam("op", "add")
+                        .queryParam("pid", playlistId)
+                        .queryParam("tracks", trackIdsParam)
+                        .build())
+                .retrieve()
+                .bodyToMono(new ParameterizedTypeReference<NeteaseResponse<Void>>() {
+                })
+                .retryWhen(Retry.backoff(3, Duration.ofSeconds(1)))
+                .block();
     } catch (Exception e) {
-      throw new RuntimeException("Failed to add tracks to playlist", e);
+        throw new RuntimeException("Failed to add tracks to playlist", e);
     }
-  }
+}
 ```
 
 **Step 6: Verify compilation**
@@ -857,6 +873,7 @@ git commit -m "feat: implement NeteaseService with API integration"
 ## Task 9: Remove Unused WebClient.Builder from SecurityConfig
 
 **Files:**
+
 - Modify: `src/main/java/com/spotease/config/SecurityConfig.java`
 
 **Step 1: Remove WebClient.Builder bean**
@@ -895,6 +912,7 @@ git commit -m "refactor: remove unused WebClient.Builder bean from SecurityConfi
 ## Task 10: Add Integration Tests for SpotifyService
 
 **Files:**
+
 - Create: `src/test/java/com/spotease/service/SpotifyServiceIntegrationTest.java`
 
 **Step 1: Create integration test**
@@ -919,31 +937,31 @@ import static org.assertj.core.api.Assertions.assertThat;
 @Disabled("Requires valid Spotify access token")
 class SpotifyServiceIntegrationTest {
 
-  @Autowired
-  private SpotifyService spotifyService;
+    @Autowired
+    private SpotifyService spotifyService;
 
-  private static final String TEST_ACCESS_TOKEN = "REPLACE_WITH_VALID_TOKEN";
+    private static final String TEST_ACCESS_TOKEN = "REPLACE_WITH_VALID_TOKEN";
 
-  @Test
-  void shouldGetPlaylists() {
-    List<SpotifyPlaylist> playlists = spotifyService.getPlaylists(TEST_ACCESS_TOKEN);
+    @Test
+    void shouldGetPlaylists() {
+        List<SpotifyPlaylist> playlists = spotifyService.getPlaylists(TEST_ACCESS_TOKEN);
 
-    assertThat(playlists).isNotNull();
-    assertThat(playlists).isNotEmpty();
-    assertThat(playlists.get(0).getId()).isNotNull();
-    assertThat(playlists.get(0).getName()).isNotNull();
-  }
+        assertThat(playlists).isNotNull();
+        assertThat(playlists).isNotEmpty();
+        assertThat(playlists.get(0).getId()).isNotNull();
+        assertThat(playlists.get(0).getName()).isNotNull();
+    }
 
-  @Test
-  void shouldSearchTracks() {
-    List<SpotifyTrack> tracks = spotifyService.searchTrack(TEST_ACCESS_TOKEN, "test");
+    @Test
+    void shouldSearchTracks() {
+        List<SpotifyTrack> tracks = spotifyService.searchTrack(TEST_ACCESS_TOKEN, "test");
 
-    assertThat(tracks).isNotNull();
-    assertThat(tracks).isNotEmpty();
-    assertThat(tracks.get(0).getId()).isNotNull();
-    assertThat(tracks.get(0).getName()).isNotNull();
-    assertThat(tracks.get(0).getArtists()).isNotEmpty();
-  }
+        assertThat(tracks).isNotNull();
+        assertThat(tracks).isNotEmpty();
+        assertThat(tracks.get(0).getId()).isNotNull();
+        assertThat(tracks.get(0).getName()).isNotNull();
+        assertThat(tracks.get(0).getArtists()).isNotEmpty();
+    }
 }
 ```
 
@@ -964,6 +982,7 @@ git commit -m "test: add integration tests for SpotifyService (disabled)"
 ## Task 11: Add Integration Tests for NeteaseService
 
 **Files:**
+
 - Create: `src/test/java/com/spotease/service/NeteaseServiceIntegrationTest.java`
 
 **Step 1: Create integration test**
@@ -986,50 +1005,50 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest
 @TestPropertySource(properties = {
-    "spotease.netease.api-url=https://netease-api.rivenlalala.xyz"
+        "spotease.netease.api-url=https://netease-api.rivenlalala.xyz"
 })
 class NeteaseServiceIntegrationTest {
 
-  @Autowired
-  private NeteaseService neteaseService;
+    @Autowired
+    private NeteaseService neteaseService;
 
-  private static final String TEST_COOKIE = "001C92E8052E6CF95C6F6226275A187F801A85936C0FB8E9C1D0E9C378A356CE3A017EE110171614B582DAFC54E351AA090D47CB34BC3909317B3E60811316E4C0D4E2B5D3EA080E1370076297AFED9D845AEF626910601FBA3631518BD92F213FFA5671610F9473E29D8DE2E1FB0FEB2D93BA80E24309336360DCCE9CB39778D247B146C7F0042C35061ADDA172CE15B6C4C97B189B033AD4A701C139F52B0F17FF8D6EEE4870B4E4B66693B23CDD0B54DC55409707D2B1A45797ABFD02AC001FB8F167160176F5AA2D82BB30ADC8B8E146C653F5B7186F8D743C124B48F7CF0ADCDD130F8E378229F594E3A9EE1322A59B6B055197E3ADD6E14D2683EE95B7B1F2C5E8181E3A2CBA2CBC22117C454FAFC83217A5A93BBD03F571F17A5F827DD4C41CCBBF96A3BA4E500FA03FE5BE9F09";
+    private static final String TEST_COOKIE = "001C92E8052E6CF95C6F6226275A187F801A85936C0FB8E9C1D0E9C378A356CE3A017EE110171614B582DAFC54E351AA090D47CB34BC3909317B3E60811316E4C0D4E2B5D3EA080E1370076297AFED9D845AEF626910601FBA3631518BD92F213FFA5671610F9473E29D8DE2E1FB0FEB2D93BA80E24309336360DCCE9CB39778D247B146C7F0042C35061ADDA172CE15B6C4C97B189B033AD4A701C139F52B0F17FF8D6EEE4870B4E4B66693B23CDD0B54DC55409707D2B1A45797ABFD02AC001FB8F167160176F5AA2D82BB30ADC8B8E146C653F5B7186F8D743C124B48F7CF0ADCDD130F8E378229F594E3A9EE1322A59B6B055197E3ADD6E14D2683EE95B7B1F2C5E8181E3A2CBA2CBC22117C454FAFC83217A5A93BBD03F571F17A5F827DD4C41CCBBF96A3BA4E500FA03FE5BE9F09";
 
-  @Test
-  void shouldGetPlaylists() {
-    List<NeteasePlaylist> playlists = neteaseService.getPlaylists(TEST_COOKIE);
+    @Test
+    void shouldGetPlaylists() {
+        List<NeteasePlaylist> playlists = neteaseService.getPlaylists(TEST_COOKIE);
 
-    assertThat(playlists).isNotNull();
-    assertThat(playlists).isNotEmpty();
-    assertThat(playlists.get(0).getId()).isNotNull();
-    assertThat(playlists.get(0).getName()).isNotNull();
-  }
-
-  @Test
-  void shouldGetPlaylistTracks() {
-    // Use first playlist from getPlaylists
-    List<NeteasePlaylist> playlists = neteaseService.getPlaylists(TEST_COOKIE);
-    String playlistId = playlists.get(0).getId();
-
-    List<NeteaseTrack> tracks = neteaseService.getPlaylistTracks(TEST_COOKIE, playlistId);
-
-    assertThat(tracks).isNotNull();
-    if (!tracks.isEmpty()) {
-      assertThat(tracks.get(0).getId()).isNotNull();
-      assertThat(tracks.get(0).getName()).isNotNull();
+        assertThat(playlists).isNotNull();
+        assertThat(playlists).isNotEmpty();
+        assertThat(playlists.get(0).getId()).isNotNull();
+        assertThat(playlists.get(0).getName()).isNotNull();
     }
-  }
 
-  @Test
-  void shouldSearchTracks() {
-    List<NeteaseTrack> tracks = neteaseService.searchTrack(TEST_COOKIE, "test");
+    @Test
+    void shouldGetPlaylistTracks() {
+        // Use first playlist from getPlaylists
+        List<NeteasePlaylist> playlists = neteaseService.getPlaylists(TEST_COOKIE);
+        String playlistId = playlists.get(0).getId();
 
-    assertThat(tracks).isNotNull();
-    assertThat(tracks).isNotEmpty();
-    assertThat(tracks.get(0).getId()).isNotNull();
-    assertThat(tracks.get(0).getName()).isNotNull();
-    assertThat(tracks.get(0).getArtists()).isNotEmpty();
-  }
+        List<NeteaseTrack> tracks = neteaseService.getPlaylistTracks(TEST_COOKIE, playlistId);
+
+        assertThat(tracks).isNotNull();
+        if (!tracks.isEmpty()) {
+            assertThat(tracks.get(0).getId()).isNotNull();
+            assertThat(tracks.get(0).getName()).isNotNull();
+        }
+    }
+
+    @Test
+    void shouldSearchTracks() {
+        List<NeteaseTrack> tracks = neteaseService.searchTrack(TEST_COOKIE, "test");
+
+        assertThat(tracks).isNotNull();
+        assertThat(tracks).isNotEmpty();
+        assertThat(tracks.get(0).getId()).isNotNull();
+        assertThat(tracks.get(0).getName()).isNotNull();
+        assertThat(tracks.get(0).getArtists()).isNotEmpty();
+    }
 }
 ```
 
@@ -1050,6 +1069,7 @@ git commit -m "test: add integration tests for NeteaseService"
 ## Task 12: Update README with SDK Information
 
 **Files:**
+
 - Modify: `README.md`
 
 **Step 1: Update implementation status section**
@@ -1119,6 +1139,7 @@ export DB_USERNAME=postgres
 export DB_PASSWORD=postgres
 export NETEASE_API_URL=https://netease-api.rivenlalala.xyz
 ```
+
 ```
 
 **Step 4: Commit**
@@ -1133,6 +1154,7 @@ git commit -m "docs: update README with SDK integration details"
 ## Task 13: Run Full Test Suite
 
 **Files:**
+
 - None (verification task)
 
 **Step 1: Run all tests**
@@ -1157,6 +1179,7 @@ Press Ctrl+C
 **Step 5: Final commit if any fixes needed**
 
 If fixes were needed:
+
 ```bash
 git add .
 git commit -m "fix: resolve issues found in final testing"

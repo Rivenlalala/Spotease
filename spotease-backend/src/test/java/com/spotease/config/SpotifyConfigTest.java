@@ -12,10 +12,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-    "spotease.spotify.client-id=test-id",
-    "spotease.spotify.client-secret=test-secret",
-    "spotease.spotify.redirect-uri=http://localhost:8080/callback",
-    "spotease.encryption.key=12345678901234567890123456789012"
+        "spotease.spotify.client-id=test-id",
+        "spotease.spotify.client-secret=test-secret",
+        "spotease.spotify.redirect-uri=http://localhost:8080/callback",
+        "spotease.encryption.key=12345678901234567890123456789012"
 })
 class SpotifyConfigTest {
 

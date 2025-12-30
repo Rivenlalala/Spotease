@@ -11,19 +11,19 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class TrackMatchDto {
-  private Long matchId;
-  private String sourceTrackId;
-  private String sourceTrackName;
-  private String sourceArtist;
-  private String sourceAlbum;
-  private Integer sourceDuration;
-  private String sourceImageUrl;
-  private String destinationTrackId;
-  private String destinationTrackName;
-  private String destinationArtist;
-  private Integer destinationDuration;
-  private String destinationImageUrl;
-  private Double matchConfidence;
-  private MatchStatus status;
-  private String errorMessage;
+    private Long matchId;
+    private String sourceTrackId;
+    private String sourceTrackName;
+    private String sourceArtist;
+    private String sourceAlbum;
+    private Integer sourceDuration;
+    private String sourceImageUrl;
+    private String destinationTrackId;
+    private String destinationTrackName;
+    private String destinationArtist;
+    private Integer destinationDuration;
+    private String destinationImageUrl;
+    private Double matchConfidence;
+    private MatchStatus status;
+    private String errorMessage;
 }

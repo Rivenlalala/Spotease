@@ -12,12 +12,12 @@ import java.util.Map;
 @RequestMapping("/api")
 public class HealthController {
 
-  @GetMapping("/health")
-  public ResponseEntity<?> health() {
-    return ResponseEntity.ok(Map.of(
-        "status", "UP",
-        "timestamp", LocalDateTime.now(),
-        "service", "spotease-backend"
-    ));
-  }
+    @GetMapping("/health")
+    public ResponseEntity<?> health() {
+        return ResponseEntity.ok(Map.of(
+                "status", "UP",
+                "timestamp", LocalDateTime.now(),
+                "service", "spotease-backend"
+        ));
+    }
 }

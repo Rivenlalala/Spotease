@@ -17,244 +17,246 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.hamcrest.Matchers.*;
+import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.is;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @ExtendWith(MockitoExtension.class)
 class AuthControllerTest {
 
-  private MockMvc mockMvc;
+    private MockMvc mockMvc;
 
-  @Mock
-  private AuthService authService;
+    @Mock
+    private AuthService authService;
 
-  @InjectMocks
-  private AuthController authController;
+    @InjectMocks
+    private AuthController authController;
 
-  private MockHttpSession authenticatedSession;
+    private MockHttpSession authenticatedSession;
 
-  @BeforeEach
-  void setUp() {
-    mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
+    @BeforeEach
+    void setUp() {
+        mockMvc = MockMvcBuilders.standaloneSetup(authController).build();
 
-    authenticatedSession = new MockHttpSession();
-    authenticatedSession.setAttribute("userId", 1L);
-  }
+        authenticatedSession = new MockHttpSession();
+        authenticatedSession.setAttribute("userId", 1L);
+    }
 
-  @Test
-  void testGenerateNeteaseQR_Success() throws Exception {
-    // Arrange
-    when(authService.generateNeteaseQRKey()).thenReturn("test-qr-key-abc123");
+    @Test
+    void testGenerateNeteaseQR_Success() throws Exception {
+        // Arrange
+        when(authService.generateNeteaseQRKey()).thenReturn("test-qr-key-abc123");
 
-    // Act & Assert
-    mockMvc.perform(post("/api/auth/netease/qr")
-            .session(authenticatedSession))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.qrKey", is("test-qr-key-abc123")))
-        .andExpect(jsonPath("$.qrUrl", containsString("test-qr-key-abc123")));
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/netease/qr")
+                        .session(authenticatedSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.qrKey", is("test-qr-key-abc123")))
+                .andExpect(jsonPath("$.qrUrl", containsString("test-qr-key-abc123")));
 
-    verify(authService).generateNeteaseQRKey();
-  }
+        verify(authService).generateNeteaseQRKey();
+    }
 
-  @Test
-  void testGenerateNeteaseQR_Unauthorized() throws Exception {
-    // Act & Assert
-    mockMvc.perform(post("/api/auth/netease/qr"))
-        .andExpect(status().isUnauthorized());
+    @Test
+    void testGenerateNeteaseQR_Unauthorized() throws Exception {
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/netease/qr"))
+                .andExpect(status().isUnauthorized());
 
-    verifyNoInteractions(authService);
-  }
+        verifyNoInteractions(authService);
+    }
 
-  @Test
-  void testCheckNeteaseQRStatus_Waiting() throws Exception {
-    // Arrange
-    NeteaseQRStatus status = new NeteaseQRStatus();
-    status.setCode(801);
-    status.setMessage("等待扫码");
+    @Test
+    void testCheckNeteaseQRStatus_Waiting() throws Exception {
+        // Arrange
+        NeteaseQRStatus status = new NeteaseQRStatus();
+        status.setCode(801);
+        status.setMessage("等待扫码");
 
-    when(authService.checkNeteaseQRStatus("test-key")).thenReturn(status);
+        when(authService.checkNeteaseQRStatus("test-key")).thenReturn(status);
 
-    // Act & Assert
-    mockMvc.perform(get("/api/auth/netease/qr/status")
-            .param("key", "test-key")
-            .session(authenticatedSession))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("WAITING")))
-        .andExpect(jsonPath("$.message", is("等待扫码")));
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/netease/qr/status")
+                        .param("key", "test-key")
+                        .session(authenticatedSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("WAITING")))
+                .andExpect(jsonPath("$.message", is("等待扫码")));
 
-    verify(authService).checkNeteaseQRStatus("test-key");
-  }
+        verify(authService).checkNeteaseQRStatus("test-key");
+    }
 
-  @Test
-  void testCheckNeteaseQRStatus_Success() throws Exception {
-    // Arrange
-    NeteaseQRStatus status = new NeteaseQRStatus();
-    status.setCode(803);
-    status.setCookie("MUSIC_U=test_cookie_value");
-    status.setMessage("授权登录成功");
+    @Test
+    void testCheckNeteaseQRStatus_Success() throws Exception {
+        // Arrange
+        NeteaseQRStatus status = new NeteaseQRStatus();
+        status.setCode(803);
+        status.setCookie("MUSIC_U=test_cookie_value");
+        status.setMessage("授权登录成功");
 
-    User user = new User();
-    user.setId(1L);
-    user.setNeteaseUserId("12345");
+        User user = new User();
+        user.setId(1L);
+        user.setNeteaseUserId("12345");
 
-    when(authService.checkNeteaseQRStatus("test-key")).thenReturn(status);
-    when(authService.handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie_value"))
-        .thenReturn(user);
+        when(authService.checkNeteaseQRStatus("test-key")).thenReturn(status);
+        when(authService.handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie_value"))
+                .thenReturn(user);
 
-    // Act & Assert
-    mockMvc.perform(get("/api/auth/netease/qr/status")
-            .param("key", "test-key")
-            .session(authenticatedSession))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("SUCCESS")))
-        .andExpect(jsonPath("$.message", is("授权登录成功")));
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/netease/qr/status")
+                        .param("key", "test-key")
+                        .session(authenticatedSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("SUCCESS")))
+                .andExpect(jsonPath("$.message", is("授权登录成功")));
 
-    verify(authService).checkNeteaseQRStatus("test-key");
-    verify(authService).handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie_value");
-  }
+        verify(authService).checkNeteaseQRStatus("test-key");
+        verify(authService).handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie_value");
+    }
 
-  @Test
-  void testCheckNeteaseQRStatus_Expired() throws Exception {
-    // Arrange
-    NeteaseQRStatus status = new NeteaseQRStatus();
-    status.setCode(800);
-    status.setMessage("二维码已过期");
+    @Test
+    void testCheckNeteaseQRStatus_Expired() throws Exception {
+        // Arrange
+        NeteaseQRStatus status = new NeteaseQRStatus();
+        status.setCode(800);
+        status.setMessage("二维码已过期");
 
-    when(authService.checkNeteaseQRStatus("test-key")).thenReturn(status);
+        when(authService.checkNeteaseQRStatus("test-key")).thenReturn(status);
 
-    // Act & Assert
-    mockMvc.perform(get("/api/auth/netease/qr/status")
-            .param("key", "test-key")
-            .session(authenticatedSession))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.status", is("EXPIRED")))
-        .andExpect(jsonPath("$.message", is("二维码已过期")));
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/netease/qr/status")
+                        .param("key", "test-key")
+                        .session(authenticatedSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status", is("EXPIRED")))
+                .andExpect(jsonPath("$.message", is("二维码已过期")));
 
-    verify(authService).checkNeteaseQRStatus("test-key");
-    verify(authService, never()).handleNeteaseQRLogin(anyLong(), anyString());
-  }
+        verify(authService).checkNeteaseQRStatus("test-key");
+        verify(authService, never()).handleNeteaseQRLogin(anyLong(), anyString());
+    }
 
-  @Test
-  void testCheckNeteaseQRStatus_MissingKey() throws Exception {
-    // Act & Assert
-    mockMvc.perform(get("/api/auth/netease/qr/status")
-            .session(authenticatedSession))
-        .andExpect(status().isBadRequest());
+    @Test
+    void testCheckNeteaseQRStatus_MissingKey() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/netease/qr/status")
+                        .session(authenticatedSession))
+                .andExpect(status().isBadRequest());
 
-    verifyNoInteractions(authService);
-  }
+        verifyNoInteractions(authService);
+    }
 
-  @Test
-  void testSpotifyCallback_Success_RedirectsToFrontend() throws Exception {
-    // Arrange
-    MockHttpSession session = new MockHttpSession();
-    session.setAttribute("spotify_oauth_state", "test-state");
+    @Test
+    void testSpotifyCallback_Success_RedirectsToFrontend() throws Exception {
+        // Arrange
+        MockHttpSession session = new MockHttpSession();
+        session.setAttribute("spotify_oauth_state", "test-state");
 
-    User user = new User();
-    user.setId(1L);
-    user.setEmail("test@example.com");
+        User user = new User();
+        user.setId(1L);
+        user.setEmail("test@example.com");
 
-    when(authService.handleSpotifyCallback("test-code")).thenReturn(user);
+        when(authService.handleSpotifyCallback("test-code")).thenReturn(user);
 
-    // Act & Assert
-    mockMvc.perform(get("/api/auth/spotify/callback")
-            .param("code", "test-code")
-            .param("state", "test-state")
-            .session(session))
-        .andExpect(status().isFound())
-        .andExpect(header().string("Location", "http://127.0.0.1:5173/"));
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/spotify/callback")
+                        .param("code", "test-code")
+                        .param("state", "test-state")
+                        .session(session))
+                .andExpect(status().isFound())
+                .andExpect(header().string("Location", "http://127.0.0.1:5173/"));
 
-    verify(authService).handleSpotifyCallback("test-code");
+        verify(authService).handleSpotifyCallback("test-code");
 
-    // Verify session contains userId
-    assertThat(session.getAttribute("userId")).isEqualTo(1L);
+        // Verify session contains userId
+        assertThat(session.getAttribute("userId")).isEqualTo(1L);
 
-    // Verify Spring Security authentication was set
-    Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-    assertThat(auth).isNotNull();
-    assertThat(auth.getPrincipal()).isEqualTo(1L);
-    assertThat(auth.isAuthenticated()).isTrue();
-  }
+        // Verify Spring Security authentication was set
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        assertThat(auth).isNotNull();
+        assertThat(auth.getPrincipal()).isEqualTo(1L);
+        assertThat(auth.isAuthenticated()).isTrue();
+    }
 
-  @Test
-  void testSubmitNeteaseCookie_Success() throws Exception {
-    // Arrange
-    User user = new User();
-    user.setId(1L);
-    user.setNeteaseUserId("12345");
+    @Test
+    void testSubmitNeteaseCookie_Success() throws Exception {
+        // Arrange
+        User user = new User();
+        user.setId(1L);
+        user.setNeteaseUserId("12345");
 
-    when(authService.handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie"))
-        .thenReturn(user);
+        when(authService.handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie"))
+                .thenReturn(user);
 
-    // Act & Assert
-    mockMvc.perform(post("/api/auth/netease/cookie")
-            .contentType("application/json")
-            .content("{\"cookie\": \"MUSIC_U=test_cookie\"}")
-            .session(authenticatedSession))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.success", is(true)));
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/netease/cookie")
+                        .contentType("application/json")
+                        .content("{\"cookie\": \"MUSIC_U=test_cookie\"}")
+                        .session(authenticatedSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success", is(true)));
 
-    verify(authService).handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie");
-  }
+        verify(authService).handleNeteaseQRLogin(1L, "MUSIC_U=test_cookie");
+    }
 
-  @Test
-  void testSubmitNeteaseCookie_Unauthorized() throws Exception {
-    // Act & Assert
-    mockMvc.perform(post("/api/auth/netease/cookie")
-            .contentType("application/json")
-            .content("{\"cookie\": \"MUSIC_U=test_cookie\"}"))
-        .andExpect(status().isUnauthorized());
+    @Test
+    void testSubmitNeteaseCookie_Unauthorized() throws Exception {
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/netease/cookie")
+                        .contentType("application/json")
+                        .content("{\"cookie\": \"MUSIC_U=test_cookie\"}"))
+                .andExpect(status().isUnauthorized());
 
-    verifyNoInteractions(authService);
-  }
+        verifyNoInteractions(authService);
+    }
 
-  @Test
-  void testSubmitNeteaseCookie_MissingCookie() throws Exception {
-    // Act & Assert
-    mockMvc.perform(post("/api/auth/netease/cookie")
-            .contentType("application/json")
-            .content("{\"cookie\": \"\"}")
-            .session(authenticatedSession))
-        .andExpect(status().isBadRequest());
+    @Test
+    void testSubmitNeteaseCookie_MissingCookie() throws Exception {
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/netease/cookie")
+                        .contentType("application/json")
+                        .content("{\"cookie\": \"\"}")
+                        .session(authenticatedSession))
+                .andExpect(status().isBadRequest());
 
-    verifyNoInteractions(authService);
-  }
+        verifyNoInteractions(authService);
+    }
 
-  @Test
-  void testGetAuthStatus_Unauthenticated() throws Exception {
-    // Act & Assert
-    mockMvc.perform(get("/api/auth/status"))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.authenticated", is(false)))
-        .andExpect(jsonPath("$.spotifyConnected", is(false)))
-        .andExpect(jsonPath("$.neteaseConnected", is(false)));
+    @Test
+    void testGetAuthStatus_Unauthenticated() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/status"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.authenticated", is(false)))
+                .andExpect(jsonPath("$.spotifyConnected", is(false)))
+                .andExpect(jsonPath("$.neteaseConnected", is(false)));
 
-    verifyNoInteractions(authService);
-  }
+        verifyNoInteractions(authService);
+    }
 
-  @Test
-  void testGetAuthStatus_AuthenticatedWithSpotify() throws Exception {
-    // Arrange
-    AuthStatusResponse response = AuthStatusResponse.builder()
-        .authenticated(true)
-        .userId(1L)
-        .spotifyConnected(true)
-        .neteaseConnected(false)
-        .build();
+    @Test
+    void testGetAuthStatus_AuthenticatedWithSpotify() throws Exception {
+        // Arrange
+        AuthStatusResponse response = AuthStatusResponse.builder()
+                .authenticated(true)
+                .userId(1L)
+                .spotifyConnected(true)
+                .neteaseConnected(false)
+                .build();
 
-    when(authService.getUserConnectionStatus(1L)).thenReturn(response);
+        when(authService.getUserConnectionStatus(1L)).thenReturn(response);
 
-    // Act & Assert
-    mockMvc.perform(get("/api/auth/status")
-            .session(authenticatedSession))
-        .andExpect(status().isOk())
-        .andExpect(jsonPath("$.authenticated", is(true)))
-        .andExpect(jsonPath("$.userId", is(1)))
-        .andExpect(jsonPath("$.spotifyConnected", is(true)))
-        .andExpect(jsonPath("$.neteaseConnected", is(false)));
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/status")
+                        .session(authenticatedSession))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.authenticated", is(true)))
+                .andExpect(jsonPath("$.userId", is(1)))
+                .andExpect(jsonPath("$.spotifyConnected", is(true)))
+                .andExpect(jsonPath("$.neteaseConnected", is(false)));
 
-    verify(authService).getUserConnectionStatus(1L);
-  }
+        verify(authService).getUserConnectionStatus(1L);
+    }
 }

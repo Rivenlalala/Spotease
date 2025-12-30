@@ -9,35 +9,35 @@ import static org.mockito.Mockito.*;
 
 class WebSocketConfigTest {
 
-  @Test
-  void configureMessageBrokerShouldEnableSimpleBroker() {
-    WebSocketConfig config = new WebSocketConfig();
-    MessageBrokerRegistry registry = mock(MessageBrokerRegistry.class);
+    @Test
+    void configureMessageBrokerShouldEnableSimpleBroker() {
+        WebSocketConfig config = new WebSocketConfig();
+        MessageBrokerRegistry registry = mock(MessageBrokerRegistry.class);
 
-    config.configureMessageBroker(registry);
+        config.configureMessageBroker(registry);
 
-    verify(registry).enableSimpleBroker("/topic");
-    verify(registry).setApplicationDestinationPrefixes("/app");
-  }
+        verify(registry).enableSimpleBroker("/topic");
+        verify(registry).setApplicationDestinationPrefixes("/app");
+    }
 
-  @Test
-  void registerStompEndpointsShouldConfigureEndpoint() {
-    WebSocketConfig config = new WebSocketConfig();
-    StompEndpointRegistry registry = mock(StompEndpointRegistry.class);
-    StompWebSocketEndpointRegistration registration = mock(StompWebSocketEndpointRegistration.class);
+    @Test
+    void registerStompEndpointsShouldConfigureEndpoint() {
+        WebSocketConfig config = new WebSocketConfig();
+        StompEndpointRegistry registry = mock(StompEndpointRegistry.class);
+        StompWebSocketEndpointRegistration registration = mock(StompWebSocketEndpointRegistration.class);
 
-    when(registry.addEndpoint("/ws/conversions")).thenReturn(registration);
-    when(registration.setAllowedOrigins(
-        "http://localhost:5173", "http://localhost:3000",
-        "http://127.0.0.1:5173", "http://127.0.0.1:3000"))
-        .thenReturn(registration);
+        when(registry.addEndpoint("/ws/conversions")).thenReturn(registration);
+        when(registration.setAllowedOrigins(
+                "http://localhost:5173", "http://localhost:3000",
+                "http://127.0.0.1:5173", "http://127.0.0.1:3000"))
+                .thenReturn(registration);
 
-    config.registerStompEndpoints(registry);
+        config.registerStompEndpoints(registry);
 
-    verify(registry).addEndpoint("/ws/conversions");
-    verify(registration).setAllowedOrigins(
-        "http://localhost:5173", "http://localhost:3000",
-        "http://127.0.0.1:5173", "http://127.0.0.1:3000");
-    verify(registration).withSockJS();
-  }
+        verify(registry).addEndpoint("/ws/conversions");
+        verify(registration).setAllowedOrigins(
+                "http://localhost:5173", "http://localhost:3000",
+                "http://127.0.0.1:5173", "http://127.0.0.1:3000");
+        verify(registration).withSockJS();
+    }
 }

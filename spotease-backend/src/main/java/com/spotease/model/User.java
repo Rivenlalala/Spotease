@@ -14,38 +14,38 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class User {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @Column(unique = true)
-  private String email;
+    @Column(unique = true)
+    private String email;
 
-  @CreatedDate
-  @Column(nullable = false, updatable = false)
-  private LocalDateTime createdAt;
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-  @LastModifiedDate
-  @Column(nullable = false)
-  private LocalDateTime updatedAt;
+    @LastModifiedDate
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
-  // Spotify fields
-  @Column(unique = true)
-  private String spotifyUserId;
+    // Spotify fields
+    @Column(unique = true)
+    private String spotifyUserId;
 
-  @Column(length = 1024)
-  private String spotifyAccessToken;  // Encrypted
+    @Column(length = 1024)
+    private String spotifyAccessToken;  // Encrypted
 
-  @Column(length = 1024)
-  private String spotifyRefreshToken; // Encrypted
+    @Column(length = 1024)
+    private String spotifyRefreshToken; // Encrypted
 
-  private LocalDateTime spotifyTokenExpiry;
+    private LocalDateTime spotifyTokenExpiry;
 
-  // NetEase fields
-  private String neteaseUserId;
+    // NetEase fields
+    private String neteaseUserId;
 
-  @Column(length = 2048)
-  private String neteaseCookie;  // Encrypted
+    @Column(length = 2048)
+    private String neteaseCookie;  // Encrypted
 
-  private LocalDateTime neteaseCookieExpiry;
+    private LocalDateTime neteaseCookieExpiry;
 }

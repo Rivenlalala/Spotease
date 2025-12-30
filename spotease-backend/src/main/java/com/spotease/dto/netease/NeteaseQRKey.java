@@ -6,12 +6,12 @@ import lombok.Data;
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NeteaseQRKey {
-  private Integer code;
-  private NeteaseQRKeyData data;
+    private Integer code;
+    private NeteaseQRKeyData data;
 
-  @Data
-  @JsonIgnoreProperties(ignoreUnknown = true)
-  public static class NeteaseQRKeyData {
-    private String unikey;
-  }
+    @Data
+    @JsonIgnoreProperties(ignoreUnknown = true)
+    public static class NeteaseQRKeyData {
+        private String unikey;
+    }
 }

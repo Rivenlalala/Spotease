@@ -21,104 +21,104 @@ import static org.mockito.Mockito.verify;
 @ExtendWith(MockitoExtension.class)
 class WebSocketServiceTest {
 
-  @Mock
-  private SimpMessagingTemplate messagingTemplate;
+    @Mock
+    private SimpMessagingTemplate messagingTemplate;
 
-  @InjectMocks
-  private WebSocketService webSocketService;
+    @InjectMocks
+    private WebSocketService webSocketService;
 
-  private ConversionJob job;
+    private ConversionJob job;
 
-  @BeforeEach
-  void setUp() {
-    job = new ConversionJob();
-    job.setId(1L);
-    job.setStatus(JobStatus.PROCESSING);
-    job.setTotalTracks(10);
-    job.setProcessedTracks(5);
-    job.setHighConfidenceMatches(3);
-    job.setLowConfidenceMatches(1);
-    job.setFailedTracks(1);
-  }
+    @BeforeEach
+    void setUp() {
+        job = new ConversionJob();
+        job.setId(1L);
+        job.setStatus(JobStatus.PROCESSING);
+        job.setTotalTracks(10);
+        job.setProcessedTracks(5);
+        job.setHighConfidenceMatches(3);
+        job.setLowConfidenceMatches(1);
+        job.setFailedTracks(1);
+    }
 
-  @Test
-  void shouldSendJobUpdateToBothTopics() {
-    // When
-    webSocketService.sendJobUpdate(job);
+    @Test
+    void shouldSendJobUpdateToBothTopics() {
+        // When
+        webSocketService.sendJobUpdate(job);
 
-    // Then - verify message sent to both general and job-specific topics
-    verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
-  }
+        // Then - verify message sent to both general and job-specific topics
+        verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
+    }
 
-  @Test
-  void shouldSendJobUpdateWithCorrectMessage() {
-    // When
-    webSocketService.sendJobUpdate(job);
+    @Test
+    void shouldSendJobUpdateWithCorrectMessage() {
+        // When
+        webSocketService.sendJobUpdate(job);
 
-    // Then
-    ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
+        // Then
+        ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
 
-    WebSocketMessage message = messageCaptor.getValue();
-    assertThat(message.getJobId()).isEqualTo(1L);
-    assertThat(message.getStatus()).isEqualTo(JobStatus.PROCESSING);
-    assertThat(message.getTotalTracks()).isEqualTo(10);
-    assertThat(message.getProcessedTracks()).isEqualTo(5);
-    assertThat(message.getHighConfidenceMatches()).isEqualTo(3);
-    assertThat(message.getLowConfidenceMatches()).isEqualTo(1);
-    assertThat(message.getFailedTracks()).isEqualTo(1);
-  }
+        WebSocketMessage message = messageCaptor.getValue();
+        assertThat(message.getJobId()).isEqualTo(1L);
+        assertThat(message.getStatus()).isEqualTo(JobStatus.PROCESSING);
+        assertThat(message.getTotalTracks()).isEqualTo(10);
+        assertThat(message.getProcessedTracks()).isEqualTo(5);
+        assertThat(message.getHighConfidenceMatches()).isEqualTo(3);
+        assertThat(message.getLowConfidenceMatches()).isEqualTo(1);
+        assertThat(message.getFailedTracks()).isEqualTo(1);
+    }
 
-  @Test
-  void shouldSendJobCompleteToBothTopics() {
-    // When
-    webSocketService.sendJobComplete(job);
+    @Test
+    void shouldSendJobCompleteToBothTopics() {
+        // When
+        webSocketService.sendJobComplete(job);
 
-    // Then
-    verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
-  }
+        // Then
+        verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
+    }
 
-  @Test
-  void shouldSendJobCompleteWithCorrectMessage() {
-    // When
-    webSocketService.sendJobComplete(job);
+    @Test
+    void shouldSendJobCompleteWithCorrectMessage() {
+        // When
+        webSocketService.sendJobComplete(job);
 
-    // Then
-    ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
+        // Then
+        ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
 
-    WebSocketMessage message = messageCaptor.getValue();
-    assertThat(message.getJobId()).isEqualTo(1L);
-    assertThat(message.getStatus()).isEqualTo(JobStatus.PROCESSING);
-  }
+        WebSocketMessage message = messageCaptor.getValue();
+        assertThat(message.getJobId()).isEqualTo(1L);
+        assertThat(message.getStatus()).isEqualTo(JobStatus.PROCESSING);
+    }
 
-  @Test
-  void shouldSendJobErrorToBothTopics() {
-    // When
-    webSocketService.sendJobError(job, "Test error message");
+    @Test
+    void shouldSendJobErrorToBothTopics() {
+        // When
+        webSocketService.sendJobError(job, "Test error message");
 
-    // Then
-    verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
-  }
+        // Then
+        verify(messagingTemplate, times(2)).convertAndSend(any(String.class), any(WebSocketMessage.class));
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), any(WebSocketMessage.class));
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions/1"), any(WebSocketMessage.class));
+    }
 
-  @Test
-  void shouldSendJobErrorWithCorrectMessage() {
-    // When
-    webSocketService.sendJobError(job, "Test error message");
+    @Test
+    void shouldSendJobErrorWithCorrectMessage() {
+        // When
+        webSocketService.sendJobError(job, "Test error message");
 
-    // Then
-    ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
-    verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
+        // Then
+        ArgumentCaptor<WebSocketMessage> messageCaptor = ArgumentCaptor.forClass(WebSocketMessage.class);
+        verify(messagingTemplate).convertAndSend(eq("/topic/conversions"), messageCaptor.capture());
 
-    WebSocketMessage message = messageCaptor.getValue();
-    assertThat(message.getJobId()).isEqualTo(1L);
-    assertThat(message.getStatus()).isEqualTo(JobStatus.FAILED);
-    assertThat(message.getErrorMessage()).isEqualTo("Test error message");
-  }
+        WebSocketMessage message = messageCaptor.getValue();
+        assertThat(message.getJobId()).isEqualTo(1L);
+        assertThat(message.getStatus()).isEqualTo(JobStatus.FAILED);
+        assertThat(message.getErrorMessage()).isEqualTo("Test error message");
+    }
 }

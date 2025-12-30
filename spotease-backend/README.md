@@ -30,11 +30,13 @@ Spring Boot backend for Spotease - Spotify and NetEase Music playlist converter.
 ## Setup
 
 1. **Create PostgreSQL database:**
+
 ```bash
 psql -U postgres -c "CREATE DATABASE spotease;"
 ```
 
 2. **Configure environment variables:**
+
 ```bash
 export SPOTIFY_CLIENT_ID=your_spotify_client_id
 export SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
@@ -47,10 +49,12 @@ export NETEASE_API_URL=https://netease-api.rivenlalala.xyz
 ```
 
 3. **Update application.yml or set environment variables:**
+
 - Set `ENCRYPTION_KEY` environment variable to a secure 32-character string
 - Database credentials (DB_USERNAME, DB_PASSWORD) are configurable via environment variables and default to `postgres`
 
 4. **Run the application:**
+
 ```bash
 mvn spring-boot:run
 ```
@@ -60,6 +64,7 @@ Application will start on http://localhost:8080
 ## API Endpoints
 
 ### Authentication
+
 - `GET /api/auth/spotify/login` - Get Spotify OAuth URL
 - `GET /api/auth/spotify/callback` - Spotify OAuth callback
 - `POST /api/auth/netease/qr` - Generate NetEase QR code
@@ -68,14 +73,17 @@ Application will start on http://localhost:8080
 - `POST /api/auth/logout` - Logout
 
 ### Playlists
+
 - `GET /api/playlists/spotify` - List user's Spotify playlists
 - `GET /api/playlists/netease` - List user's NetEase playlists
 - `GET /api/playlists/{platform}/{id}` - Get single playlist details
 
 ### Review (Manual Search)
+
 - `GET /api/conversions/{jobId}/matches/search?query=...` - Search for alternative tracks
 
 ### Health
+
 - `GET /api/health` - Health check endpoint
 
 ## Project Structure
@@ -95,11 +103,13 @@ src/main/java/com/spotease/
 ## Development
 
 ### Running Tests
+
 ```bash
 mvn test
 ```
 
 ### Building
+
 ```bash
 mvn clean package
 ```
@@ -111,6 +121,7 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 ## Implemented Features
 
 **Core Services:**
+
 - ✅ ConversionService - Job creation and validation
 - ✅ ConversionWorker - Async background processor
 - ✅ WebSocketService - Real-time job updates
@@ -119,6 +130,7 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 - ✅ NeteaseService - NetEase API integration
 
 **REST API Endpoints:**
+
 - `POST /api/conversions` - Create new conversion job
 - `GET /api/conversions` - List all user jobs
 - `GET /api/conversions/{jobId}` - Get job details
@@ -128,10 +140,11 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 - `POST /api/conversions/{jobId}/matches/{matchId}/skip` - Skip match
 
 **WebSocket:**
+
 - `WS /ws/conversions` - Real-time job updates (STOMP over SockJS)
 - Topics:
-  - `/topic/conversions` - All job updates (for Dashboard)
-  - `/topic/conversions/{jobId}` - Job-specific updates (for detail views)
+    - `/topic/conversions` - All job updates (for Dashboard)
+    - `/topic/conversions/{jobId}` - Job-specific updates (for detail views)
 
 ## Job Processing Flow
 
@@ -140,11 +153,11 @@ This project uses Hibernate auto-DDL (development only). For production, conside
 3. `@TransactionalEventListener(phase = AFTER_COMMIT)` triggers async worker after transaction commits
 4. ConversionWorker processes asynchronously, job status: PROCESSING
 5. For each track:
-   - In UPDATE mode: first check existing tracks in destination (threshold: 0.30)
-   - If no existing match: MatchingService searches destination platform API
-   - AUTO_MATCHED (≥0.85): Add to destination immediately
-   - PENDING_REVIEW (0.60-0.84): Save for user review
-   - FAILED (<0.60): Save for user review
+    - In UPDATE mode: first check existing tracks in destination (threshold: 0.30)
+    - If no existing match: MatchingService searches destination platform API
+    - AUTO_MATCHED (≥0.85): Add to destination immediately
+    - PENDING_REVIEW (0.60-0.84): Save for user review
+    - FAILED (<0.60): Save for user review
 6. WebSocket updates sent every 5 tracks (to both general and job-specific topics)
 7. Job status: REVIEW_PENDING (if pending/failed) or COMPLETED
 8. User reviews pending matches via frontend
@@ -189,21 +202,24 @@ This ensures the job exists in the database before the async worker tries to loa
 **MatchingService** implements intelligent track matching between Spotify and NetEase Music:
 
 **Features:**
+
 - Multi-factor scoring: Track name (40%), Artist (30%), Duration (30%)
 - Dynamic weight rebalancing when data is missing
 - 3-tier search fallback strategy for maximum match rate
 - UPDATE mode optimization: checks existing destination tracks first (threshold: 0.30)
 - Confidence-based thresholds:
-  - AUTO_MATCHED (≥0.85): Automatically added to destination playlist
-  - PENDING_REVIEW (0.60-0.84): Requires user review
-  - FAILED (<0.60): No confident match found
+    - AUTO_MATCHED (≥0.85): Automatically added to destination playlist
+    - PENDING_REVIEW (0.60-0.84): Requires user review
+    - FAILED (<0.60): No confident match found
 
 **String Similarity:**
+
 - Levenshtein distance algorithm for string comparison
 - Normalization: lowercase, remove special chars, normalize "feat"/"ft."
 - Handles artist name variations and track title differences
 
 **Search Strategy:**
+
 - Tier 1: `"{track name}" {first artist}` (quoted search)
 - Tier 2: `{track name} {first artist}` (unquoted search)
 - Tier 3: `{track name}` (name only, fallback)
@@ -214,18 +230,20 @@ existing tracks in the destination playlist. If a match is found with score ≥0
 it skips the API search entirely. This prevents duplicate tracks and reduces API calls.
 
 **Usage:**
+
 ```java
 TrackMatch match = matchingService.findBestMatch(
-    sourceTrack,           // SpotifyTrack or NeteaseTrack
-    Platform.NETEASE,      // Destination platform
-    "access-token",        // Platform access token
-    conversionJob          // ConversionJob entity
+        sourceTrack,           // SpotifyTrack or NeteaseTrack
+        Platform.NETEASE,      // Destination platform
+        "access-token",        // Platform access token
+        conversionJob          // ConversionJob entity
 );
 ```
 
 ## Implementation Status
 
 **Completed:**
+
 - ✅ Project structure and dependencies
 - ✅ JPA entities (User, ConversionJob, TrackMatch)
 - ✅ Spring Data repositories
@@ -250,6 +268,7 @@ TrackMatch match = matchingService.findBestMatch(
 **Backend Complete:** All core features implemented and tested.
 
 **Next Steps:**
+
 - Frontend integration
 - End-to-end testing
 - Production deployment
@@ -258,7 +277,8 @@ TrackMatch match = matchingService.findBestMatch(
 
 ### Overview
 
-Spotease uses profile-based CORS configuration with explicit origin whitelisting to support cross-origin requests from the frontend while maintaining security.
+Spotease uses profile-based CORS configuration with explicit origin whitelisting to support cross-origin requests from
+the frontend while maintaining security.
 
 ### Configuration Files
 
@@ -268,11 +288,13 @@ Spotease uses profile-based CORS configuration with explicit origin whitelisting
 ### Environment Variables
 
 Override CORS origins using:
+
 ```bash
 CORS_ALLOWED_ORIGINS=https://spotease.rivenlalala.xyz
 ```
 
 Supports multiple origins (comma-separated):
+
 ```bash
 CORS_ALLOWED_ORIGINS=https://spotease.rivenlalala.xyz,https://app.spotease.com
 ```
@@ -287,12 +309,14 @@ CORS_ALLOWED_ORIGINS=https://spotease.rivenlalala.xyz,https://app.spotease.com
 ### Session Cookie Configuration
 
 **Production:**
+
 - `SameSite`: Lax (allows OAuth redirects)
 - `Secure`: true (HTTPS only)
 - `HttpOnly`: true (XSS protection)
 - `Domain`: .rivenlalala.xyz (shared across subdomains)
 
 **Development:**
+
 - `Secure`: false (allows HTTP)
 - No domain setting (works with 127.0.0.1)
 
@@ -310,16 +334,19 @@ curl -X OPTIONS http://127.0.0.1:8080/api/health \
 ```
 
 **Expected:** CORS headers in response:
+
 - `Access-Control-Allow-Origin: http://127.0.0.1:5173`
 - `Access-Control-Allow-Credentials: true`
 
 ### Troubleshooting
 
 **CORS headers not appearing:**
+
 - Verify profile is active: Look for "The following profiles are active: dev"
 - Check CORS origins match exactly (including protocol)
 
 **Cookies not sent from frontend:**
+
 - Ensure `credentials: 'include'` in fetch calls
 - Verify `secure: false` in development profile
 

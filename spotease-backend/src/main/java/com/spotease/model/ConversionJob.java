@@ -14,55 +14,55 @@ import java.time.LocalDateTime;
 @EntityListeners(AuditingEntityListener.class)
 public class ConversionJob {
 
-  @Id
-  @GeneratedValue(strategy = GenerationType.IDENTITY)
-  private Long id;
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
 
-  @ManyToOne(fetch = FetchType.LAZY)
-  @JoinColumn(name = "user_id", nullable = false)
-  private User user;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", nullable = false)
+    private User user;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private Platform sourcePlatform;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Platform sourcePlatform;
 
-  @Column(nullable = false)
-  private String sourcePlaylistId;
+    @Column(nullable = false)
+    private String sourcePlaylistId;
 
-  @Column(nullable = false)
-  private String sourcePlaylistName;
+    @Column(nullable = false)
+    private String sourcePlaylistName;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private Platform destinationPlatform;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private Platform destinationPlatform;
 
-  private String destinationPlaylistId;  // Nullable for CREATE mode
+    private String destinationPlaylistId;  // Nullable for CREATE mode
 
-  @Column(nullable = false)
-  private String destinationPlaylistName;
+    @Column(nullable = false)
+    private String destinationPlaylistName;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private ConversionMode mode;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ConversionMode mode;
 
-  @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
-  private JobStatus status;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private JobStatus status;
 
-  @CreatedDate
-  @Column(nullable = false, updatable = false)
-  private LocalDateTime createdAt;
+    @CreatedDate
+    @Column(nullable = false, updatable = false)
+    private LocalDateTime createdAt;
 
-  @LastModifiedDate
-  @Column(nullable = false)
-  private LocalDateTime updatedAt;
+    @LastModifiedDate
+    @Column(nullable = false)
+    private LocalDateTime updatedAt;
 
-  private LocalDateTime completedAt;
+    private LocalDateTime completedAt;
 
-  // Progress tracking
-  private Integer totalTracks = 0;
-  private Integer processedTracks = 0;
-  private Integer highConfidenceMatches = 0;
-  private Integer lowConfidenceMatches = 0;
-  private Integer failedTracks = 0;
+    // Progress tracking
+    private Integer totalTracks = 0;
+    private Integer processedTracks = 0;
+    private Integer highConfidenceMatches = 0;
+    private Integer lowConfidenceMatches = 0;
+    private Integer failedTracks = 0;
 }

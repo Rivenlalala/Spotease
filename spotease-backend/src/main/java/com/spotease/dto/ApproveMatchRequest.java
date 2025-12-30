@@ -10,9 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class ApproveMatchRequest {
-  private String destinationTrackId;
-  private String destinationTrackName;
-  private String destinationArtist;
-  private Integer destinationDuration;
-  private String destinationAlbumImageUrl;
+    private String destinationTrackId;
+    private String destinationTrackName;
+    private String destinationArtist;
+    private Integer destinationDuration;
+    private String destinationAlbumImageUrl;
 }

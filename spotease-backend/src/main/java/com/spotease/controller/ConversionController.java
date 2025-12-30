@@ -22,154 +22,154 @@ import java.util.stream.Collectors;
 @Slf4j
 public class ConversionController {
 
-  private final ConversionService conversionService;
-  private final ConversionJobRepository jobRepository;
+    private final ConversionService conversionService;
+    private final ConversionJobRepository jobRepository;
 
-  /**
-   * Create a new conversion job
-   */
-  @PostMapping
-  public ResponseEntity<ConversionResponse> createConversionJob(
-      @Valid @RequestBody ConversionRequest request,
-      HttpSession session) {
+    /**
+     * Create a new conversion job
+     */
+    @PostMapping
+    public ResponseEntity<ConversionResponse> createConversionJob(
+            @Valid @RequestBody ConversionRequest request,
+            HttpSession session) {
 
-    Long userId = getUserIdFromSession(session);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        Long userId = getUserIdFromSession(session);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+
+        log.info("Creating conversion job for user {}", userId);
+
+        ConversionJob job = conversionService.createJob(userId, request);
+        ConversionResponse response = mapToResponse(job);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
-    log.info("Creating conversion job for user {}", userId);
+    /**
+     * Get all conversion jobs for the authenticated user
+     */
+    @GetMapping
+    public ResponseEntity<List<ConversionResponse>> getAllConversionJobs(HttpSession session) {
+        Long userId = getUserIdFromSession(session);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-    ConversionJob job = conversionService.createJob(userId, request);
-    ConversionResponse response = mapToResponse(job);
+        log.info("Fetching all conversion jobs for user {}", userId);
 
-    return ResponseEntity.status(HttpStatus.CREATED).body(response);
-  }
+        List<ConversionJob> jobs = jobRepository.findByUser_Id(userId);
+        List<ConversionResponse> responses = jobs.stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
 
-  /**
-   * Get all conversion jobs for the authenticated user
-   */
-  @GetMapping
-  public ResponseEntity<List<ConversionResponse>> getAllConversionJobs(HttpSession session) {
-    Long userId = getUserIdFromSession(session);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        return ResponseEntity.ok(responses);
     }
 
-    log.info("Fetching all conversion jobs for user {}", userId);
+    /**
+     * Get a specific conversion job by ID
+     */
+    @GetMapping("/{jobId}")
+    public ResponseEntity<ConversionResponse> getConversionJob(
+            @PathVariable Long jobId,
+            HttpSession session) {
 
-    List<ConversionJob> jobs = jobRepository.findByUser_Id(userId);
-    List<ConversionResponse> responses = jobs.stream()
-        .map(this::mapToResponse)
-        .collect(Collectors.toList());
+        Long userId = getUserIdFromSession(session);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-    return ResponseEntity.ok(responses);
-  }
+        log.info("Fetching conversion job {} for user {}", jobId, userId);
 
-  /**
-   * Get a specific conversion job by ID
-   */
-  @GetMapping("/{jobId}")
-  public ResponseEntity<ConversionResponse> getConversionJob(
-      @PathVariable Long jobId,
-      HttpSession session) {
+        ConversionJob job = jobRepository.findById(jobId)
+                .orElse(null);
 
-    Long userId = getUserIdFromSession(session);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        if (job == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        // Check ownership
+        if (!job.getUser().getId().equals(userId)) {
+            log.warn("User {} attempted to access job {} owned by user {}",
+                    userId, jobId, job.getUser().getId());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        ConversionResponse response = mapToResponse(job);
+        return ResponseEntity.ok(response);
     }
 
-    log.info("Fetching conversion job {} for user {}", jobId, userId);
+    /**
+     * Delete a conversion job by ID
+     */
+    @DeleteMapping("/{jobId}")
+    public ResponseEntity<Void> deleteConversionJob(
+            @PathVariable Long jobId,
+            HttpSession session) {
 
-    ConversionJob job = jobRepository.findById(jobId)
-        .orElse(null);
+        Long userId = getUserIdFromSession(session);
+        if (userId == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
 
-    if (job == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        log.info("Deleting conversion job {} for user {}", jobId, userId);
+
+        ConversionJob job = jobRepository.findById(jobId)
+                .orElse(null);
+
+        if (job == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
+        // Check ownership
+        if (!job.getUser().getId().equals(userId)) {
+            log.warn("User {} attempted to delete job {} owned by user {}",
+                    userId, jobId, job.getUser().getId());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        jobRepository.delete(job);
+        log.info("Deleted conversion job {}", jobId);
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 
-    // Check ownership
-    if (!job.getUser().getId().equals(userId)) {
-      log.warn("User {} attempted to access job {} owned by user {}",
-          userId, jobId, job.getUser().getId());
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+    /**
+     * Helper method to get userId from HttpSession
+     */
+    private Long getUserIdFromSession(HttpSession session) {
+        if (session == null) {
+            return null;
+        }
+        Object userIdObj = session.getAttribute("userId");
+        if (userIdObj instanceof Long) {
+            return (Long) userIdObj;
+        }
+        return null;
     }
 
-    ConversionResponse response = mapToResponse(job);
-    return ResponseEntity.ok(response);
-  }
-
-  /**
-   * Delete a conversion job by ID
-   */
-  @DeleteMapping("/{jobId}")
-  public ResponseEntity<Void> deleteConversionJob(
-      @PathVariable Long jobId,
-      HttpSession session) {
-
-    Long userId = getUserIdFromSession(session);
-    if (userId == null) {
-      return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+    /**
+     * Helper method to map ConversionJob to ConversionResponse
+     */
+    private ConversionResponse mapToResponse(ConversionJob job) {
+        return ConversionResponse.builder()
+                .id(job.getId())
+                .status(job.getStatus())
+                .sourcePlatform(job.getSourcePlatform().name())
+                .sourcePlaylistId(job.getSourcePlaylistId())
+                .sourcePlaylistName(job.getSourcePlaylistName())
+                .destinationPlatform(job.getDestinationPlatform().name())
+                .destinationPlaylistId(job.getDestinationPlaylistId())
+                .destinationPlaylistName(job.getDestinationPlaylistName())
+                .mode(job.getMode().name())
+                .totalTracks(job.getTotalTracks())
+                .processedTracks(job.getProcessedTracks())
+                .highConfidenceMatches(job.getHighConfidenceMatches())
+                .lowConfidenceMatches(job.getLowConfidenceMatches())
+                .failedTracks(job.getFailedTracks())
+                .createdAt(job.getCreatedAt())
+                .updatedAt(job.getUpdatedAt())
+                .completedAt(job.getCompletedAt())
+                .build();
     }
-
-    log.info("Deleting conversion job {} for user {}", jobId, userId);
-
-    ConversionJob job = jobRepository.findById(jobId)
-        .orElse(null);
-
-    if (job == null) {
-      return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-    }
-
-    // Check ownership
-    if (!job.getUser().getId().equals(userId)) {
-      log.warn("User {} attempted to delete job {} owned by user {}",
-          userId, jobId, job.getUser().getId());
-      return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-    }
-
-    jobRepository.delete(job);
-    log.info("Deleted conversion job {}", jobId);
-
-    return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-  }
-
-  /**
-   * Helper method to get userId from HttpSession
-   */
-  private Long getUserIdFromSession(HttpSession session) {
-    if (session == null) {
-      return null;
-    }
-    Object userIdObj = session.getAttribute("userId");
-    if (userIdObj instanceof Long) {
-      return (Long) userIdObj;
-    }
-    return null;
-  }
-
-  /**
-   * Helper method to map ConversionJob to ConversionResponse
-   */
-  private ConversionResponse mapToResponse(ConversionJob job) {
-    return ConversionResponse.builder()
-        .id(job.getId())
-        .status(job.getStatus())
-        .sourcePlatform(job.getSourcePlatform().name())
-        .sourcePlaylistId(job.getSourcePlaylistId())
-        .sourcePlaylistName(job.getSourcePlaylistName())
-        .destinationPlatform(job.getDestinationPlatform().name())
-        .destinationPlaylistId(job.getDestinationPlaylistId())
-        .destinationPlaylistName(job.getDestinationPlaylistName())
-        .mode(job.getMode().name())
-        .totalTracks(job.getTotalTracks())
-        .processedTracks(job.getProcessedTracks())
-        .highConfidenceMatches(job.getHighConfidenceMatches())
-        .lowConfidenceMatches(job.getLowConfidenceMatches())
-        .failedTracks(job.getFailedTracks())
-        .createdAt(job.getCreatedAt())
-        .updatedAt(job.getUpdatedAt())
-        .completedAt(job.getCompletedAt())
-        .build();
-  }
 }
