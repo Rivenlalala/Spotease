@@ -169,6 +169,7 @@ const ReviewMatches = () => {
 
         {currentMatch && (
           <TrackMatchCard
+            key={currentMatch.matchId}
             match={currentMatch}
             onApprove={handleApprove}
             onSkip={handleSkip}
