@@ -7,6 +7,7 @@ import com.spotease.model.User;
 import com.spotease.service.AuthService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -24,6 +25,9 @@ import java.util.UUID;
 public class AuthController {
 
     private final AuthService authService;
+
+    @Value("${cors.allowed-origins}")
+    private String allowedOrigins;
 
     @GetMapping("/spotify/login")
     public ResponseEntity<?> spotifyLogin(HttpSession session) {
@@ -73,8 +77,9 @@ public class AuthController {
         SecurityContextHolder.getContext().setAuthentication(auth);
 
         // Redirect to frontend
+        String frontendUrl = allowedOrigins.split(",")[0].trim();
         return ResponseEntity.status(HttpStatus.FOUND)
-                .header("Location", "http://127.0.0.1:5173/")
+                .header("Location", frontendUrl + "/")
                 .build();
     }
 
