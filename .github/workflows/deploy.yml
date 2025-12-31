@@ -30,7 +30,8 @@ jobs:
         run: |
           ssh $VPS_USER@$VPS_HOST << 'ENDSSH'
             cd ~/spotease
-            git pull origin main
+            git fetch origin main
+            git reset --hard origin/main
 
             # Create .env file from GitHub secrets
             cat > .env << EOF
